@@ -2,7 +2,7 @@
 
 ## Java y Spring
 
-- Java 17 como version base.
+- Java 21 como version base.
 - Spring Boot 3.5.x para mantener compatibilidad con Spring Cloud 2025.0.x.
 - Maven multi-modulo para compilar todo desde una raiz comun.
 
@@ -17,6 +17,7 @@
 
 - PostgreSQL con una base por microservicio.
 - RabbitMQ para eventos entre servicios.
+- Redis para presencia y sesiones del servicio de tiempo real.
 - Contratos de eventos compartidos en `shared-events`.
 
 ## Seguridad

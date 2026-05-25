@@ -1,6 +1,6 @@
 # Orioneta Backend
 
-Backend de Orioneta basado en microservicios con Spring Boot, Spring Cloud Gateway, BFF, JPA, RabbitMQ y modulos compartidos.
+Backend de Orioneta basado en microservicios con Spring Boot, Spring Cloud Gateway, BFF, JPA, RabbitMQ, Redis y modulos compartidos.
 
 ## Modulos
 
@@ -20,7 +20,7 @@ Backend de Orioneta basado en microservicios con Spring Boot, Spring Cloud Gatew
 
 ## Requisitos
 
-- Java 17
+- Java 21
 - Maven 3.9+
 - Docker y Docker Compose
 

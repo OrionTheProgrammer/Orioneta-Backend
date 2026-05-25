@@ -16,6 +16,7 @@ flowchart LR
     CONV --> RMQ
     RMQ --> RT[realtime-service]
     RMQ --> NOTIF[notification-service]
+    RT --> REDIS[(Redis)]
     AUTH --> DBA[(orioneta_auth)]
     USER --> DBU[(orioneta_users)]
     CONV --> DBC[(orioneta_conversations)]

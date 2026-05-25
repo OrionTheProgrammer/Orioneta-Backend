@@ -16,6 +16,7 @@ digraph Orioneta {
   realtime [label="realtime-service"];
   audit [label="audit-service"];
   rabbitmq [label="RabbitMQ", shape=cylinder, fillcolor="#fff4e6"];
+  redis [label="Redis\npresencia/sesiones", shape=cylinder, fillcolor="#fff0f0"];
   postgres [label="PostgreSQL\nbase por servicio", shape=cylinder, fillcolor="#edf7ff"];
 
   frontend -> gateway;
@@ -33,6 +34,7 @@ digraph Orioneta {
   notifications -> rabbitmq;
   rabbitmq -> realtime;
   rabbitmq -> audit;
+  realtime -> redis;
 
   auth -> postgres;
   users -> postgres;
