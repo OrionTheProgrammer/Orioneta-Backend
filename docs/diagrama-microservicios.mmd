@@ -1,0 +1,14 @@
+flowchart LR
+    FE[Frontend] --> GW[gateway-service]
+    GW --> BFF[bff-service]
+    BFF --> AUTH[auth-service]
+    BFF --> USER[user-service]
+    BFF --> CONTACT[contact-service]
+    BFF --> CONV[conversation-service]
+    BFF --> MSG[message-service]
+    BFF --> MEDIA[media-service]
+    MSG --> RMQ[(RabbitMQ)]
+    CONV --> RMQ
+    RMQ --> RT[realtime-service]
+    RMQ --> NOTIF[notification-service]
+    RMQ --> AUDIT[audit-service]

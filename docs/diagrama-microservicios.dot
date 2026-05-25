@@ -1,0 +1,45 @@
+digraph Orioneta {
+  graph [rankdir=LR, bgcolor="white", splines=ortho, nodesep=0.55, ranksep=0.8];
+  node [shape=box, style="rounded,filled", fillcolor="#f7f8fb", color="#5b6472", fontname="DejaVu Sans"];
+  edge [color="#5b6472", fontname="DejaVu Sans"];
+
+  frontend [label="Frontend"];
+  gateway [label="gateway-service"];
+  bff [label="bff-service"];
+  auth [label="auth-service"];
+  users [label="user-service"];
+  contacts [label="contact-service"];
+  conversations [label="conversation-service"];
+  messages [label="message-service"];
+  notifications [label="notification-service"];
+  media [label="media-service"];
+  realtime [label="realtime-service"];
+  audit [label="audit-service"];
+  rabbitmq [label="RabbitMQ", shape=cylinder, fillcolor="#fff4e6"];
+  postgres [label="PostgreSQL\nbase por servicio", shape=cylinder, fillcolor="#edf7ff"];
+
+  frontend -> gateway;
+  gateway -> bff;
+  bff -> auth;
+  bff -> users;
+  bff -> contacts;
+  bff -> conversations;
+  bff -> messages;
+  bff -> notifications;
+  bff -> media;
+
+  conversations -> rabbitmq;
+  messages -> rabbitmq;
+  notifications -> rabbitmq;
+  rabbitmq -> realtime;
+  rabbitmq -> audit;
+
+  auth -> postgres;
+  users -> postgres;
+  contacts -> postgres;
+  conversations -> postgres;
+  messages -> postgres;
+  notifications -> postgres;
+  media -> postgres;
+  audit -> postgres;
+}

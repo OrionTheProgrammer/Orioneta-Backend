@@ -1,0 +1,15 @@
+package cl.orioneta.shared.kernel.response;
+
+import java.time.Instant;
+
+public record ApiResponse<T>(
+        boolean success,
+        String message,
+        T data,
+        Instant timestamp
+) {
+
+    public static <T> ApiResponse<T> ok(T data) {
+        return new ApiResponse<>(true, "OK", data, Instant.now());
+    }
+}
