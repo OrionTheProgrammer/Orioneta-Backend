@@ -5,17 +5,18 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 /**
- * Request used to create the public user profile after registration.
+ * Solicitud usada para crear el perfil publico despues del registro.
  *
- * <p>The authentication credentials belong to {@code auth-service}. This DTO
- * only contains public identity fields managed by {@code user-service}.
+ * <p>Las credenciales de autenticacion pertenecen a {@code auth-service}. Este
+ * DTO solo contiene campos de identidad publica administrados por
+ * {@code user-service}.
  *
- * @param username unique username selected by the user
- * @param displayName visible name shown in Orioneta
- * @param email email used to connect the auth identity with the public profile
- * @param avatarUrl optional avatar image URL
- * @param bannerUrl optional profile banner URL
- * @param bio optional short biography
+ * @param username username unico elegido por la persona
+ * @param displayName nombre visible dentro de Orioneta
+ * @param email correo usado para conectar auth con el perfil publico
+ * @param avatarUrl URL opcional de la imagen de avatar
+ * @param bannerUrl URL opcional del banner del perfil
+ * @param bio biografia corta opcional
  */
 public record CreateUserRequestDTO(
         @NotBlank

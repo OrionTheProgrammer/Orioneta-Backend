@@ -4,47 +4,47 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Value object that identifies a user inside Orioneta.
+ * Objeto de valor que identifica a un usuario dentro de Orioneta.
  *
- * <p>The domain creates an id before the user reaches persistence so use cases
- * can publish events, correlate logs and compose responses without waiting for a
- * database-generated value. The persistence adapter can also rehydrate this
- * object with an existing UUID by using {@link #UserID(UUID)}.
+ * <p>El dominio crea el id antes de llegar a persistencia para que los casos de
+ * uso puedan publicar eventos, correlacionar logs y construir respuestas sin
+ * esperar un valor generado por la base de datos. Un adaptador tambien puede
+ * reconstruir este objeto con un UUID existente mediante {@link #UserID(UUID)}.
  */
 public class UserID {
 
     private final UUID value;
 
     /**
-     * Creates a new random user id.
+     * Crea un id aleatorio para un usuario nuevo.
      */
     public UserID() {
         this.value = UUID.randomUUID();
     }
 
     /**
-     * Rehydrates a user id that already exists in persistence.
+     * Reconstruye un id que ya existe en persistencia.
      *
-     * @param value existing UUID value
+     * @param value valor UUID existente
      */
     public UserID(UUID value) {
         this.value = Objects.requireNonNull(value, "El valor del UserID es obligatorio.");
     }
 
     /**
-     * Parses a UUID string into a user id value object.
+     * Convierte un texto UUID en un objeto de valor {@code UserID}.
      *
-     * @param value UUID as text
-     * @return user id value object
+     * @param value UUID en formato texto
+     * @return objeto de valor del id de usuario
      */
     public static UserID fromString(String value) {
         return new UserID(UUID.fromString(value));
     }
 
     /**
-     * Returns the raw UUID used by persistence and external DTOs.
+     * Entrega el UUID usado por persistencia y DTOs externos.
      *
-     * @return raw UUID value
+     * @return valor UUID interno
      */
     public UUID getValue() {
         return value;

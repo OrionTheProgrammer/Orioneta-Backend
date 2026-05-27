@@ -1,19 +1,19 @@
 package cl.orioneta.users.domain.exception;
 
 /**
- * Base runtime exception for user-domain invariant violations.
+ * Excepcion base para reglas de dominio incumplidas en usuarios.
  *
- * <p>Throw this exception when the model receives invalid data, such as blank
- * usernames or malformed friend codes. Controllers should translate it to a
- * client-friendly error response, while domain classes can stay independent from
- * Spring MVC.
+ * <p>Se lanza cuando el modelo recibe datos invalidos, como usernames vacios o
+ * codigos de amistad mal formados. Los controladores deberian traducirla a una
+ * respuesta entendible para el cliente, mientras el dominio sigue independiente
+ * de Spring MVC.
  */
 public class UserGlobalException extends RuntimeException {
 
     /**
-     * Creates a domain exception with a readable business message.
+     * Crea una excepcion de dominio con un mensaje de negocio legible.
      *
-     * @param message explanation of the violated rule
+     * @param message explicacion de la regla incumplida
      */
     public UserGlobalException(String message) {
         super(message);

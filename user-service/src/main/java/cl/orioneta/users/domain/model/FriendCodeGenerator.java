@@ -3,11 +3,11 @@ package cl.orioneta.users.domain.model;
 import java.security.SecureRandom;
 
 /**
- * Generates public hexadecimal friend codes for user discovery.
+ * Genera codigos hexadecimales publicos para encontrar usuarios.
  *
- * <p>The generated value is a candidate. The database or repository adapter must
- * still verify uniqueness before saving a user, because only persistence can
- * know every code that already exists.
+ * <p>El valor generado es un candidato. La base de datos o el adaptador de
+ * repositorio deben verificar unicidad antes de guardar, porque solo
+ * persistencia conoce todos los codigos existentes.
  */
 public final class FriendCodeGenerator {
 
@@ -19,9 +19,9 @@ public final class FriendCodeGenerator {
     }
 
     /**
-     * Creates an uppercase hexadecimal code such as {@code A91F23C7}.
+     * Crea un codigo hexadecimal en mayusculas, por ejemplo {@code A91F23C7}.
      *
-     * @return generated friend code candidate
+     * @return candidato de codigo de amistad generado
      */
     public static String generate() {
         char[] value = new char[DEFAULT_LENGTH];

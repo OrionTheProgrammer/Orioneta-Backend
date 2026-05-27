@@ -7,89 +7,90 @@ import cl.orioneta.users.domain.model.User;
 import cl.orioneta.users.domain.model.UserID;
 
 /**
- * Output port used by application use cases to persist and search users.
+ * Puerto de salida usado por los casos de uso para persistir y buscar usuarios.
  *
- * <p>The domain and application layers depend on this interface instead of JPA.
- * Infrastructure adapters will implement it using repositories, HTTP clients or
- * test doubles without forcing business code to know those details.
+ * <p>Las capas de dominio y aplicacion dependen de esta interfaz en vez de JPA.
+ * Los adaptadores de infraestructura pueden implementarla con repositorios,
+ * clientes HTTP o dobles de prueba sin obligar al negocio a conocer esos
+ * detalles.
  */
 public interface UserRepositoryPort {
 
     /**
-     * Persists a user aggregate.
+     * Guarda un agregado de usuario.
      *
-     * @param user user to save
-     * @return saved user
+     * @param user usuario a guardar
+     * @return usuario guardado
      */
     User save(User user);
 
     /**
-     * Finds a user by internal id.
+     * Busca un usuario por id interno.
      *
-     * @param id internal user id
-     * @return user when found
+     * @param id id interno del usuario
+     * @return usuario encontrado, si existe
      */
     Optional<User> findById(UserID id);
 
     /**
-     * Finds a user by unique username.
+     * Busca un usuario por username unico.
      *
-     * @param username username to search
-     * @return user when found
+     * @param username username a buscar
+     * @return usuario encontrado, si existe
      */
     Optional<User> findByUsername(String username);
 
     /**
-     * Finds a user by unique email.
+     * Busca un usuario por correo unico.
      *
-     * @param email email to search
-     * @return user when found
+     * @param email correo a buscar
+     * @return usuario encontrado, si existe
      */
     Optional<User> findByEmail(String email);
 
     /**
-     * Finds a user by public hexadecimal friend code.
+     * Busca un usuario por codigo de amistad hexadecimal publico.
      *
-     * @param friendCode public code used by friendship flows
-     * @return user when found
+     * @param friendCode codigo publico usado por flujos de amistad
+     * @return usuario encontrado, si existe
      */
     Optional<User> findByFriendCode(String friendCode);
 
     /**
-     * Lists all users available to the current adapter.
+     * Lista todos los usuarios disponibles para el adaptador actual.
      *
-     * @return users
+     * @return usuarios encontrados
      */
     List<User> findAll();
 
     /**
-     * Checks username uniqueness before creating a user.
+     * Revisa si un username ya existe antes de crear un usuario.
      *
-     * @param username username to check
-     * @return true when the username already exists
+     * @param username username a revisar
+     * @return true si el username ya existe
      */
     boolean existsByUsername(String username);
 
     /**
-     * Checks email uniqueness before creating a user.
+     * Revisa si un correo ya existe antes de crear un usuario.
      *
-     * @param email email to check
-     * @return true when the email already exists
+     * @param email correo a revisar
+     * @return true si el correo ya existe
      */
     boolean existsByEmail(String email);
 
     /**
-     * Checks friend code uniqueness before saving a generated code.
+     * Revisa si un codigo de amistad ya existe antes de guardar uno generado.
      *
-     * @param friendCode friend code candidate
-     * @return true when the code already exists
+     * @param friendCode candidato de codigo de amistad
+     * @return true si el codigo ya existe
      */
     boolean existsByFriendCode(String friendCode);
 
     /**
-     * Deletes a user by internal id.
+     * Elimina un usuario por id interno.
      *
-     * @param id user id to delete
+     * @param id id del usuario a eliminar
      */
     void deleteById(UserID id);
 }

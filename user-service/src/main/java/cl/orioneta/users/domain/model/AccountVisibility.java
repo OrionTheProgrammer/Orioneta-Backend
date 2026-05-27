@@ -1,11 +1,11 @@
 package cl.orioneta.users.domain.model;
 
 /**
- * Defines how discoverable a user profile is for social features.
+ * Define que tan visible es un perfil para las funciones sociales.
  *
- * <p>The enum belongs to {@code user-service} because visibility is part of the
- * user's public identity. Services such as {@code friendship-service} should
- * query user data instead of duplicating this rule.
+ * <p>El enum pertenece a {@code user-service} porque la visibilidad forma parte
+ * de la identidad publica. Servicios como {@code friendship-service} deben
+ * consultar este dato en vez de duplicar la regla.
  */
 public enum AccountVisibility {
     PUBLIC,

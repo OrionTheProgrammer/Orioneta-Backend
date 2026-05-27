@@ -1,10 +1,10 @@
 package cl.orioneta.users.domain.model;
 
 /**
- * Represents the presence state shown to friends and active conversations.
+ * Representa el estado de presencia visible para amigos y conversaciones.
  *
- * <p>The enum only expresses the domain vocabulary. Synchronizing status across
- * devices or WebSocket sessions belongs to application services and
+ * <p>El enum solo define vocabulario de dominio. Sincronizar el estado entre
+ * dispositivos o sesiones WebSocket corresponde a casos de uso y al
  * {@code realtime-service}.
  */
 public enum UserStatus {

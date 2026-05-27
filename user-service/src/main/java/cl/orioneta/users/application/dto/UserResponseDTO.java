@@ -6,23 +6,23 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Response returned by user-facing endpoints.
+ * Respuesta entregada por endpoints relacionados con usuarios.
  *
- * <p>It exposes the public identity needed by BFF, friendship and conversation
- * flows. Sensitive authentication details never belong here.
+ * <p>Expone la identidad publica que necesitan BFF, amistad y conversaciones.
+ * Los detalles sensibles de autenticacion no deben agregarse a este DTO.
  *
- * @param id internal user id
- * @param username unique username
- * @param displayName visible name
- * @param email email associated with the profile
- * @param friendCode public hexadecimal code used to add friends
- * @param avatarUrl optional avatar image URL
- * @param bannerUrl optional profile banner URL
- * @param bio optional biography
- * @param status current presence state
- * @param accountVisibility discoverability setting
- * @param createdAt creation timestamp
- * @param updatedAt last update timestamp
+ * @param id id interno del usuario
+ * @param username username unico
+ * @param displayName nombre visible
+ * @param email correo asociado al perfil
+ * @param friendCode codigo hexadecimal publico para agregar amigos
+ * @param avatarUrl URL opcional de avatar
+ * @param bannerUrl URL opcional de banner
+ * @param bio biografia opcional
+ * @param status estado de presencia actual
+ * @param accountVisibility regla de visibilidad
+ * @param createdAt fecha de creacion
+ * @param updatedAt fecha de ultima actualizacion
  */
 public record UserResponseDTO(
         UUID id,

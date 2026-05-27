@@ -5,13 +5,13 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
- * Represents the public identity profile of an Orioneta user.
+ * Representa la identidad publica de un usuario de Orioneta.
  *
- * <p>This is a domain model, not a JPA entity. It keeps the business rules that
- * must remain true regardless of whether the user is created from a REST
- * request, a database adapter, a test fixture or a future event consumer. Future
- * persistence changes should map to and from this class instead of moving these
- * validations into controllers or entities.
+ * <p>Esta clase es modelo de dominio, no entidad JPA. Por eso mantiene reglas
+ * que deben cumplirse sin importar si el usuario llega desde un controlador,
+ * un adaptador de base de datos o un evento futuro. Los adaptadores deben
+ * convertir hacia y desde este modelo, evitando mover validaciones de negocio
+ * a controladores o entidades tecnicas.
  */
 public class User {
 
@@ -33,20 +33,21 @@ public class User {
     private LocalDateTime updatedAt;
 
     /**
-     * Creates a user profile using the required fields for the current signup
-     * flow.
+     * Crea un perfil publico nuevo con los campos editables del registro.
      *
-     * <p>The friend code is generated immediately because it is part of the
-     * public identity used by {@code friendship-service}. A persistence adapter
-     * should still enforce uniqueness at database level before saving.
+     * <p>El {@code friendCode} se genera en el dominio porque forma parte de la
+     * identidad publica que usara {@code friendship-service}. Aun asi, el
+     * adaptador de persistencia debe validar unicidad antes de guardar, porque
+     * solo la base de datos conoce todos los codigos existentes.
      *
-     * @param username unique username selected by the user
-     * @param displayName visible name shown in chats and profiles
-     * @param email email associated with the user identity
-     * @param avatarUrl optional avatar URL
-     * @param status initial presence status
+     * @param username nombre de usuario unico elegido por la persona
+     * @param displayName nombre visible en chats, grupos y perfil
+     * @param email correo asociado al perfil publico
+     * @param avatarUrl URL opcional del avatar
+     * @param bannerUrl URL opcional del banner
+     * @param bio biografia publica corta
      */
-    public User(String username, String displayName, String email, String avatarUrl, UserStatus status) {
+    public User(String username, String displayName, String email, String avatarUrl, String bannerUrl, String bio) {
         this(
                 new UserID(),
                 username,
@@ -54,9 +55,9 @@ public class User {
                 email,
                 FriendCodeGenerator.generate(),
                 avatarUrl,
-                null,
-                "",
-                status,
+                bannerUrl,
+                bio,
+                UserStatus.OFFLINE,
                 AccountVisibility.PUBLIC,
                 LocalDateTime.now(),
                 LocalDateTime.now()
@@ -64,52 +65,58 @@ public class User {
     }
 
     /**
-     * Backward-compatible constructor for the first local version of the model.
+     * Reconstruye un usuario existente desde persistencia.
      *
-     * <p>The old prototype received a phone number and {@code profileimageurl}.
-     * Phone is no longer part of the user identity in the updated architecture,
-     * so it is intentionally ignored here. The old profile image value maps to
-     * the new avatar field.
+     * <p>Este metodo se usa cuando un adaptador carga datos ya guardados. A
+     * diferencia del constructor publico, aqui no se regeneran el id, el
+     * {@code friendCode} ni las fechas, porque esos valores ya pertenecen al
+     * historial del usuario.
      *
-     * @param username unique username selected by the user
-     * @param displayName visible name shown in chats and profiles
-     * @param email email associated with the user identity
-     * @param phoneNumber legacy field, no longer stored in this domain model
-     * @param profileImageUrl legacy avatar URL field
-     * @param status initial presence status
+     * @param id identificador interno del usuario
+     * @param username nombre de usuario unico
+     * @param displayName nombre visible del perfil
+     * @param email correo asociado al perfil
+     * @param friendCode codigo publico hexadecimal para agregar amigos
+     * @param avatarUrl URL opcional del avatar
+     * @param bannerUrl URL opcional del banner
+     * @param bio biografia publica corta
+     * @param status estado de presencia actual
+     * @param accountVisibility regla de visibilidad del perfil
+     * @param createdAt fecha de creacion original
+     * @param updatedAt fecha de ultima actualizacion
+     * @return usuario reconstruido con sus valores historicos
      */
-    public User(
+    public static User rehydrate(
+            UserID id,
             String username,
             String displayName,
             String email,
-            String phoneNumber,
-            String profileImageUrl,
-            UserStatus status
+            String friendCode,
+            String avatarUrl,
+            String bannerUrl,
+            String bio,
+            UserStatus status,
+            AccountVisibility accountVisibility,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
     ) {
-        this(username, displayName, email, profileImageUrl, status);
+        return new User(
+                id,
+                username,
+                displayName,
+                email,
+                friendCode,
+                avatarUrl,
+                bannerUrl,
+                bio,
+                status,
+                accountVisibility,
+                createdAt,
+                updatedAt
+        );
     }
 
-    /**
-     * Rehydrates a user that already exists in persistence.
-     *
-     * <p>Use this constructor from adapters when loading rows from the database.
-     * It accepts all fields explicitly so historical timestamps and identifiers
-     * are not regenerated by accident.
-     *
-     * @param id internal immutable user identifier
-     * @param username unique username selected by the user
-     * @param displayName visible name shown in chats and profiles
-     * @param email email associated with the user identity
-     * @param friendCode public hexadecimal code used to add friends
-     * @param avatarUrl optional avatar URL
-     * @param bannerUrl optional profile banner URL
-     * @param bio short public biography
-     * @param status current presence status
-     * @param accountVisibility profile discoverability setting
-     * @param createdAt creation timestamp
-     * @param updatedAt last update timestamp
-     */
-    public User(
+    private User(
             UserID id,
             String username,
             String displayName,
@@ -138,16 +145,17 @@ public class User {
     }
 
     /**
-     * Updates public profile fields that can change after registration.
+     * Actualiza los campos publicos editables del perfil.
      *
-     * <p>Username, email, id and friend code are intentionally immutable in this
-     * model because changing them affects authentication, search and friendship
-     * flows. Add dedicated methods later if the product needs those changes.
+     * <p>El username, email, id y codigo de amistad quedan fuera de este metodo
+     * porque son parte de la identidad estable. Si Orioneta permite cambiarlos
+     * mas adelante, conviene crear casos de uso dedicados para manejar
+     * validaciones, auditoria y sincronizacion con otros servicios.
      *
-     * @param displayName new visible name
-     * @param avatarUrl new avatar URL, nullable when the user removes it
-     * @param bannerUrl new banner URL, nullable when the user removes it
-     * @param bio new biography, nullable or blank when the user clears it
+     * @param displayName nuevo nombre visible
+     * @param avatarUrl nueva URL de avatar, o null si se elimina
+     * @param bannerUrl nueva URL de banner, o null si se elimina
+     * @param bio nueva biografia, null o vacia si se limpia
      */
     public void updateProfile(String displayName, String avatarUrl, String bannerUrl, String bio) {
         this.displayName = requireText(displayName, "El displayName no puede ser nulo, vacio o contener solo espacios.");
@@ -158,22 +166,13 @@ public class User {
     }
 
     /**
-     * Backward-compatible profile update used by the first prototype.
+     * Cambia el estado de presencia del usuario.
      *
-     * @param displayName new visible name
-     * @param profileImageUrl legacy avatar URL field
-     */
-    public void updateProfile(String displayName, String profileImageUrl) {
-        updateProfile(displayName, profileImageUrl, bannerUrl, bio);
-    }
-
-    /**
-     * Updates the user's presence status.
+     * <p>El metodo solo modifica el estado en memoria. Publicar eventos de
+     * presencia corresponde a un caso de uso o a un adaptador de infraestructura,
+     * para que el dominio siga sin depender de RabbitMQ, WebSocket o Spring.
      *
-     * <p>This method only changes the domain state. Publishing presence events is
-     * the responsibility of an application use case or infrastructure adapter.
-     *
-     * @param status new presence status
+     * @param status nuevo estado de presencia
      */
     public void updateStatus(UserStatus status) {
         this.status = Objects.requireNonNull(status, "El estado del usuario es obligatorio.");
@@ -181,9 +180,9 @@ public class User {
     }
 
     /**
-     * Changes whether the user can be discovered by other users.
+     * Cambia si el perfil puede ser encontrado por otros usuarios.
      *
-     * @param accountVisibility new visibility preference
+     * @param accountVisibility nueva regla de visibilidad
      */
     public void changeAccountVisibility(AccountVisibility accountVisibility) {
         this.accountVisibility = Objects.requireNonNull(
@@ -194,143 +193,121 @@ public class User {
     }
 
     /**
-     * Returns the internal user identifier used by persistence and events.
+     * Entrega el identificador interno usado por persistencia y eventos.
      *
-     * @return immutable user id
+     * @return id inmutable del usuario
      */
     public UserID getId() {
         return id;
     }
 
     /**
-     * Returns the unique username chosen by the user.
+     * Entrega el username unico elegido por el usuario.
      *
-     * @return unique username
+     * @return username unico
      */
     public String getUsername() {
         return username;
     }
 
     /**
-     * Returns the visible name shown in chats, groups and profiles.
+     * Entrega el nombre visible mostrado en chats, grupos y perfiles.
      *
-     * @return display name
+     * @return nombre visible
      */
     public String getDisplayName() {
         return displayName;
     }
 
     /**
-     * Legacy getter kept temporarily while older code migrates to
-     * {@link #getDisplayName()}.
+     * Entrega el correo vinculado al perfil publico.
      *
-     * @return visible display name
-     */
-    @Deprecated(forRemoval = false)
-    public String getDisplayname() {
-        return displayName;
-    }
-
-    /**
-     * Returns the email linked to the public profile.
+     * <p>Este valor conecta la identidad de {@code auth-service} con el perfil
+     * publico. No debe exponerse en endpoints publicos si la respuesta no esta
+     * pensada para el dueno de la cuenta o para servicios internos.
      *
-     * <p>This value helps connect {@code auth-service} identity data with the
-     * user profile. Avoid exposing it publicly unless the API endpoint is meant
-     * for the authenticated owner or internal services.
-     *
-     * @return profile email
+     * @return correo del perfil
      */
     public String getEmail() {
         return email;
     }
 
     /**
-     * Returns the public hexadecimal code used by friendship flows.
+     * Entrega el codigo hexadecimal usado para agregar amigos.
      *
-     * @return friend code such as {@code A91F23C7}
+     * @return codigo de amistad, por ejemplo {@code A91F23C7}
      */
     public String getFriendCode() {
         return friendCode;
     }
 
     /**
-     * Returns the avatar URL shown in profile and chat surfaces.
+     * Entrega la URL del avatar mostrado en perfiles y chats.
      *
-     * @return avatar URL or null when none is configured
+     * @return URL del avatar o null si no existe
      */
     public String getAvatarUrl() {
         return avatarUrl;
     }
 
     /**
-     * Legacy getter kept temporarily while older code migrates to
-     * {@link #getAvatarUrl()}.
+     * Entrega la URL del banner del perfil.
      *
-     * @return avatar URL
-     */
-    @Deprecated(forRemoval = false)
-    public String getProfileimageurl() {
-        return avatarUrl;
-    }
-
-    /**
-     * Returns the profile banner URL.
-     *
-     * @return banner URL or null when none is configured
+     * @return URL del banner o null si no existe
      */
     public String getBannerUrl() {
         return bannerUrl;
     }
 
     /**
-     * Returns the short public biography.
+     * Entrega la biografia publica corta.
      *
-     * @return biography text, empty when the user has not configured one
+     * @return biografia, vacia si el usuario no configuro una
      */
     public String getBio() {
         return bio;
     }
 
     /**
-     * Returns the current presence state.
+     * Entrega el estado de presencia actual.
      *
-     * @return user status
+     * @return estado del usuario
      */
     public UserStatus getStatus() {
         return status;
     }
 
     /**
-     * Returns the account discoverability setting.
+     * Entrega la regla de visibilidad de la cuenta.
      *
-     * @return account visibility
+     * @return visibilidad de la cuenta
      */
     public AccountVisibility getAccountVisibility() {
         return accountVisibility;
     }
 
     /**
-     * Returns when the user profile was created.
+     * Entrega la fecha en que se creo el perfil.
      *
-     * @return creation timestamp
+     * @return fecha de creacion
      */
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
     /**
-     * Returns when the user profile was last updated.
+     * Entrega la fecha de la ultima actualizacion del perfil.
      *
-     * @return last update timestamp
+     * @return fecha de ultima actualizacion
      */
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
 
     /**
-     * Returns a compact representation useful for logs and debugging.
+     * Entrega una representacion compacta para logs y depuracion.
      *
-     * @return readable user representation
+     * @return representacion legible del usuario
      */
     @Override
     public String toString() {

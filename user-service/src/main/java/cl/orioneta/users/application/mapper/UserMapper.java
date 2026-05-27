@@ -4,18 +4,19 @@ import cl.orioneta.users.application.dto.UserResponseDTO;
 import cl.orioneta.users.domain.model.User;
 
 /**
- * Converts user domain objects into application DTOs.
+ * Convierte objetos de dominio de usuario en DTOs de aplicacion.
  *
- * <p>Keeping mapping here avoids leaking domain internals to controllers and
- * lets future persistence adapters evolve independently from API responses.
+ * <p>Mantener el mapeo aqui evita filtrar detalles internos del dominio hacia
+ * controladores y permite que los adaptadores de persistencia evolucionen sin
+ * cambiar las respuestas de la API.
  */
 public class UserMapper {
 
     /**
-     * Converts a domain user to the response consumed by REST and BFF layers.
+     * Convierte un usuario de dominio a la respuesta consumida por REST y BFF.
      *
-     * @param user domain user
-     * @return response DTO
+     * @param user usuario de dominio
+     * @return DTO de respuesta
      */
     public UserResponseDTO toResponse(User user) {
         return new UserResponseDTO(
