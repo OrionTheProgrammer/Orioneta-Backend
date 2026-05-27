@@ -8,12 +8,15 @@ digraph Orioneta {
   bff [label="bff-service"];
   auth [label="auth-service"];
   users [label="user-service"];
-  contacts [label="contact-service"];
+  friendships [label="friendship-service"];
   conversations [label="conversation-service"];
   messages [label="message-service"];
   notifications [label="notification-service"];
+  customization [label="customization-service"];
+  netamarket [label="neta-market-service"];
   media [label="media-service"];
   realtime [label="realtime-service"];
+  moderation [label="moderation-service"];
   audit [label="audit-service"];
   rabbitmq [label="RabbitMQ", shape=cylinder, fillcolor="#fff4e6"];
   redis [label="Redis\npresencia/sesiones", shape=cylinder, fillcolor="#fff0f0"];
@@ -23,25 +26,32 @@ digraph Orioneta {
   gateway -> bff;
   bff -> auth;
   bff -> users;
-  bff -> contacts;
+  bff -> friendships;
   bff -> conversations;
   bff -> messages;
   bff -> notifications;
   bff -> media;
+  bff -> customization;
+  bff -> netamarket;
+  netamarket -> moderation;
 
   conversations -> rabbitmq;
   messages -> rabbitmq;
   notifications -> rabbitmq;
+  moderation -> rabbitmq;
   rabbitmq -> realtime;
   rabbitmq -> audit;
   realtime -> redis;
 
   auth -> postgres;
   users -> postgres;
-  contacts -> postgres;
+  friendships -> postgres;
   conversations -> postgres;
   messages -> postgres;
   notifications -> postgres;
+  customization -> postgres;
+  netamarket -> postgres;
   media -> postgres;
+  moderation -> postgres;
   audit -> postgres;
 }

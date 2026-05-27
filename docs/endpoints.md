@@ -8,11 +8,14 @@ Los endpoints quedan definidos como contrato inicial para implementar en iteraci
 | --- | --- |
 | `/api/auth/**` | `auth-service` |
 | `/api/users/**` | `user-service` |
-| `/api/contacts/**` | `contact-service` |
+| `/api/friendships/**` | `friendship-service` |
 | `/api/conversations/**` | `conversation-service` |
 | `/api/messages/**` | `message-service` |
 | `/api/notifications/**` | `notification-service` |
 | `/api/media/**` | `media-service` |
+| `/api/customizations/**` | `customization-service` |
+| `/api/neta-market/**` | `neta-market-service` |
+| `/api/moderation/**` | `moderation-service` |
 | `/api/bff/**` | `bff-service` |
 
 ## Auth
@@ -31,7 +34,10 @@ Los endpoints quedan definidos como contrato inicial para implementar en iteraci
 | user-service | `/api/users` |
 | conversation-service | `/api/conversations` |
 | message-service | `/api/messages` |
-| contact-service | `/api/contacts` |
+| friendship-service | `/api/friendships` |
 | notification-service | `/api/notifications` |
 | media-service | `/api/media` |
+| customization-service | `/api/customizations` |
+| neta-market-service | `/api/neta-market` |
+| moderation-service | `/api/moderation` |
 | audit-service | `/api/audit` |

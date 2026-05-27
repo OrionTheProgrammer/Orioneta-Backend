@@ -12,6 +12,8 @@
 - BFF para evitar que el frontend tenga que orquestar varias APIs.
 - Gateway como entrada unica del sistema.
 - Arquitectura hexagonal en servicios con reglas de negocio.
+- `friendship-service` reemplaza el alcance de contactos para separar identidad de relaciones sociales.
+- `customization-service` y `neta-market-service` separan personalizacion de identidad, mensajes y grupos.
 
 ## Datos y mensajeria
 

@@ -43,5 +43,40 @@ services:
       timeout: 5s
       retries: 5
 
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: orioneta-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: orioneta-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: orioneta
+      GF_SECURITY_ADMIN_PASSWORD: orioneta
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+  sonarqube:
+    image: sonarqube:10.7-community
+    container_name: orioneta-sonarqube
+    ports:
+      - "9000:9000"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+
 volumes:
   postgres_data:
+  grafana_data:
+  sonarqube_data:
+  sonarqube_extensions:

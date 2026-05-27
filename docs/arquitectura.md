@@ -10,10 +10,16 @@ flowchart LR
     GW --> BFF[bff-service]
     BFF --> AUTH[auth-service]
     BFF --> USER[user-service]
+    BFF --> FRIEND[friendship-service]
     BFF --> CONV[conversation-service]
     BFF --> MSG[message-service]
+    BFF --> CUSTOM[customization-service]
+    BFF --> MARKET[neta-market-service]
+    MARKET --> MOD[moderation-service]
     MSG --> RMQ[(RabbitMQ)]
     CONV --> RMQ
+    FRIEND --> RMQ
+    MOD --> RMQ
     RMQ --> RT[realtime-service]
     RMQ --> NOTIF[notification-service]
     RT --> REDIS[(Redis)]

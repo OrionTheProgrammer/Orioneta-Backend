@@ -10,13 +10,16 @@ Backend de Orioneta basado en microservicios con Spring Boot, Spring Cloud Gatew
 | bff-service | 8081 | Backend For Frontend para respuestas orientadas al cliente |
 | auth-service | 8082 | Registro, login, JWT y refresh token |
 | user-service | 8083 | Perfil, foto y estado de usuario |
-| contact-service | 8084 | Contactos, bloqueos y busqueda |
+| friendship-service | 8084 | Amistades, solicitudes, bloqueos y busqueda por friend code |
 | conversation-service | 8085 | Chats, grupos y participantes |
 | message-service | 8086 | Envio, edicion, lectura y eliminacion de mensajes |
 | notification-service | 8087 | Notificaciones internas o push |
 | media-service | 8088 | Archivos, imagenes, audios y documentos |
 | realtime-service | 8089 | WebSocket y distribucion de eventos en tiempo real |
 | audit-service | 8090 | Registro de eventos importantes |
+| customization-service | 8091 | Preferencias visuales, temas, fondos y estilos |
+| neta-market-service | 8092 | Neta Market para templates visuales |
+| moderation-service | 8093 | Revision y aprobacion de contenido subido |
 
 ## Requisitos
 
@@ -51,6 +54,12 @@ Los modulos `shared/shared-kernel`, `shared/shared-events` y `shared/shared-secu
 ## Documentacion
 
 - [Arquitectura](docs/arquitectura.md)
+- [Arquitectura general](docs/arquitectura-general.md)
+- [Arquitectura backend](docs/arquitectura-backend.md)
 - [Endpoints](docs/endpoints.md)
+- [Eventos RabbitMQ](docs/eventos-rabbitmq.md)
+- [Neta Market](docs/neta-market.md)
+- [Observabilidad](docs/observabilidad.md)
+- [Seguridad](docs/seguridad.md)
 - [Decisiones tecnicas](docs/decisiones-tecnicas.md)
 - [Pruebas](docs/pruebas.md)
