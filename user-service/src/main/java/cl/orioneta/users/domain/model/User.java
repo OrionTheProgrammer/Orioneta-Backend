@@ -1,24 +1,26 @@
 package cl.orioneta.users.domain.model;
 
-import cl.orioneta.users.domain.exception.UserGlobalException;
+import cl.orioneta.users.domain.exception.InvalidUserDataException;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Representa la identidad publica de un usuario de Orioneta.
  *
- * <p>Esta clase es modelo de dominio, no entidad JPA. Por eso mantiene reglas
- * que deben cumplirse sin importar si el usuario llega desde un controlador,
- * un adaptador de base de datos o un evento futuro. Los adaptadores deben
- * convertir hacia y desde este modelo, evitando mover validaciones de negocio
- * a controladores o entidades tecnicas.
+ * <p>Esta clase es modelo de dominio, no entidad JPA. Mantiene las reglas que
+ * deben cumplirse sin importar si los datos llegan desde HTTP, persistencia o un
+ * consumidor de eventos futuro. La infraestructura debe mapear hacia y desde
+ * este modelo para que las validaciones de negocio no queden repartidas en
+ * controladores o entidades tecnicas.
  */
 public class User {
 
     private static final int MAX_BIO_LENGTH = 160;
     private static final int FRIEND_CODE_LENGTH = 8;
 
-    private final UserID id;
+    private final UUID id;
     private final String username;
     private final String email;
     private final String friendCode;
@@ -32,62 +34,95 @@ public class User {
     private AccountVisibility accountVisibility;
     private LocalDateTime updatedAt;
 
+    private User(
+            UUID id,
+            String username,
+            String displayName,
+            String email,
+            String friendCode,
+            String avatarUrl,
+            String bannerUrl,
+            String bio,
+            UserStatus status,
+            AccountVisibility accountVisibility,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
+        this.id = Objects.requireNonNull(id, "El id del usuario es obligatorio.");
+        this.username = requireText(username, "El username es obligatorio.");
+        this.displayName = requireText(displayName, "El nombre visible es obligatorio.");
+        this.email = requireText(email, "El email es obligatorio.");
+        this.friendCode = validateFriendCode(friendCode);
+        this.avatarUrl = normalizeOptionalText(avatarUrl);
+        this.bannerUrl = normalizeOptionalText(bannerUrl);
+        this.bio = validateBio(bio);
+        this.status = defaultStatus(status);
+        this.accountVisibility = defaultVisibility(accountVisibility);
+        this.createdAt = Objects.requireNonNull(createdAt, "La fecha de creacion es obligatoria.");
+        this.updatedAt = Objects.requireNonNull(updatedAt, "La fecha de actualizacion es obligatoria.");
+    }
+
     /**
-     * Crea un perfil publico nuevo con los campos editables del registro.
+     * Crea un usuario nuevo con los valores iniciales definidos por el negocio.
      *
-     * <p>El {@code friendCode} se genera en el dominio porque forma parte de la
-     * identidad publica que usara {@code friendship-service}. Aun asi, el
-     * adaptador de persistencia debe validar unicidad antes de guardar, porque
-     * solo la base de datos conoce todos los codigos existentes.
+     * <p>El caso de uso entrega el {@code friendCode} despues de verificar que
+     * sea unico. El dominio aplica defaults seguros: usuario desconectado,
+     * visibilidad publica y fechas iguales para creacion y actualizacion.
      *
-     * @param username nombre de usuario unico elegido por la persona
-     * @param displayName nombre visible en chats, grupos y perfil
+     * @param username username unico elegido por la persona
+     * @param displayName nombre visible dentro de Orioneta
      * @param email correo asociado al perfil publico
-     * @param avatarUrl URL opcional del avatar
-     * @param bannerUrl URL opcional del banner
-     * @param bio biografia publica corta
+     * @param friendCode codigo hexadecimal publico para agregar amigos
+     * @param bio biografia publica opcional
+     * @return usuario nuevo listo para persistir
      */
-    public User(String username, String displayName, String email, String avatarUrl, String bannerUrl, String bio) {
-        this(
-                new UserID(),
+    public static User create(
+            String username,
+            String displayName,
+            String email,
+            String friendCode,
+            String bio
+    ) {
+        LocalDateTime now = LocalDateTime.now();
+        return new User(
+                UUID.randomUUID(),
                 username,
                 displayName,
                 email,
-                FriendCodeGenerator.generate(),
-                avatarUrl,
-                bannerUrl,
+                friendCode,
+                null,
+                null,
                 bio,
                 UserStatus.OFFLINE,
                 AccountVisibility.PUBLIC,
-                LocalDateTime.now(),
-                LocalDateTime.now()
+                now,
+                now
         );
     }
 
     /**
-     * Reconstruye un usuario existente desde persistencia.
+     * Reconstruye un usuario que ya existe en persistencia.
      *
-     * <p>Este metodo se usa cuando un adaptador carga datos ya guardados. A
-     * diferencia del constructor publico, aqui no se regeneran el id, el
-     * {@code friendCode} ni las fechas, porque esos valores ya pertenecen al
-     * historial del usuario.
+     * <p>Este metodo evita regenerar id, friend code o fechas al leer desde la
+     * base de datos. Cualquier adaptador de persistencia debe usarlo cuando
+     * transforma una entidad JPA al modelo de dominio.
      *
-     * @param id identificador interno del usuario
-     * @param username nombre de usuario unico
-     * @param displayName nombre visible del perfil
+     * @param id id historico del usuario
+     * @param username username unico del usuario
+     * @param displayName nombre visible guardado
      * @param email correo asociado al perfil
-     * @param friendCode codigo publico hexadecimal para agregar amigos
-     * @param avatarUrl URL opcional del avatar
-     * @param bannerUrl URL opcional del banner
-     * @param bio biografia publica corta
-     * @param status estado de presencia actual
-     * @param accountVisibility regla de visibilidad del perfil
-     * @param createdAt fecha de creacion original
+     * @param friendCode codigo publico de amistad
+     * @param avatarUrl URL de avatar guardada
+     * @param bannerUrl URL de banner guardada
+     * @param bio biografia guardada
+     * @param status estado de presencia guardado
+     * @param accountVisibility visibilidad guardada
+     * @param createdAt fecha original de creacion
      * @param updatedAt fecha de ultima actualizacion
-     * @return usuario reconstruido con sus valores historicos
+     * @return usuario reconstruido desde persistencia
      */
     public static User rehydrate(
-            UserID id,
+            UUID id,
             String username,
             String displayName,
             String email,
@@ -116,75 +151,53 @@ public class User {
         );
     }
 
-    private User(
-            UserID id,
-            String username,
-            String displayName,
-            String email,
-            String friendCode,
-            String avatarUrl,
-            String bannerUrl,
-            String bio,
-            UserStatus status,
-            AccountVisibility accountVisibility,
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt
-    ) {
-        this.id = Objects.requireNonNull(id, "El id del usuario es obligatorio.");
-        this.username = requireText(username, "El username no puede ser nulo, vacio o contener solo espacios.");
-        this.displayName = requireText(displayName, "El displayName no puede ser nulo, vacio o contener solo espacios.");
-        this.email = requireText(email, "El email no puede ser nulo, vacio o contener solo espacios.");
-        this.friendCode = validateFriendCode(friendCode);
-        this.avatarUrl = normalizeOptionalText(avatarUrl);
-        this.bannerUrl = normalizeOptionalText(bannerUrl);
-        this.bio = validateBio(bio);
-        this.status = defaultStatus(status);
-        this.accountVisibility = defaultVisibility(accountVisibility);
-        this.createdAt = Objects.requireNonNull(createdAt, "La fecha de creacion es obligatoria.");
-        this.updatedAt = Objects.requireNonNull(updatedAt, "La fecha de actualizacion es obligatoria.");
-    }
-
     /**
-     * Actualiza los campos publicos editables del perfil.
+     * Actualiza solo los campos publicos editables del perfil.
      *
-     * <p>El username, email, id y codigo de amistad quedan fuera de este metodo
-     * porque son parte de la identidad estable. Si Orioneta permite cambiarlos
-     * mas adelante, conviene crear casos de uso dedicados para manejar
-     * validaciones, auditoria y sincronizacion con otros servicios.
+     * <p>El username, email y friend code quedan fuera porque identifican al
+     * usuario en otros flujos. Si el producto permite cambiarlos mas adelante,
+     * conviene crear casos de uso dedicados con auditoria y validaciones propias.
      *
-     * @param displayName nuevo nombre visible
-     * @param avatarUrl nueva URL de avatar, o null si se elimina
-     * @param bannerUrl nueva URL de banner, o null si se elimina
-     * @param bio nueva biografia, null o vacia si se limpia
+     * @param displayName nuevo nombre visible; si viene null no se modifica
+     * @param bio nueva biografia; si viene null no se modifica
+     * @param avatarUrl nueva URL de avatar; si viene null no se modifica
+     * @param bannerUrl nueva URL de banner; si viene null no se modifica
      */
-    public void updateProfile(String displayName, String avatarUrl, String bannerUrl, String bio) {
-        this.displayName = requireText(displayName, "El displayName no puede ser nulo, vacio o contener solo espacios.");
-        this.avatarUrl = normalizeOptionalText(avatarUrl);
-        this.bannerUrl = normalizeOptionalText(bannerUrl);
-        this.bio = validateBio(bio);
+    public void updateProfile(String displayName, String bio, String avatarUrl, String bannerUrl) {
+        if (displayName != null) {
+            this.displayName = requireText(displayName, "El nombre visible no puede quedar vacio.");
+        }
+        if (bio != null) {
+            this.bio = validateBio(bio);
+        }
+        if (avatarUrl != null) {
+            this.avatarUrl = normalizeOptionalText(avatarUrl);
+        }
+        if (bannerUrl != null) {
+            this.bannerUrl = normalizeOptionalText(bannerUrl);
+        }
         touch();
     }
 
     /**
      * Cambia el estado de presencia del usuario.
      *
-     * <p>El metodo solo modifica el estado en memoria. Publicar eventos de
-     * presencia corresponde a un caso de uso o a un adaptador de infraestructura,
-     * para que el dominio siga sin depender de RabbitMQ, WebSocket o Spring.
+     * <p>Publicar eventos de presencia corresponde a una capa de aplicacion o al
+     * {@code realtime-service}; el dominio solo mantiene la regla local.
      *
      * @param status nuevo estado de presencia
      */
-    public void updateStatus(UserStatus status) {
+    public void changeStatus(UserStatus status) {
         this.status = Objects.requireNonNull(status, "El estado del usuario es obligatorio.");
         touch();
     }
 
     /**
-     * Cambia si el perfil puede ser encontrado por otros usuarios.
+     * Cambia la visibilidad social del perfil.
      *
      * @param accountVisibility nueva regla de visibilidad
      */
-    public void changeAccountVisibility(AccountVisibility accountVisibility) {
+    public void changeVisibility(AccountVisibility accountVisibility) {
         this.accountVisibility = Objects.requireNonNull(
                 accountVisibility,
                 "La visibilidad de la cuenta es obligatoria."
@@ -193,16 +206,16 @@ public class User {
     }
 
     /**
-     * Entrega el identificador interno usado por persistencia y eventos.
+     * Entrega el id interno usado por persistencia y eventos.
      *
-     * @return id inmutable del usuario
+     * @return id del usuario
      */
-    public UserID getId() {
+    public UUID getId() {
         return id;
     }
 
     /**
-     * Entrega el username unico elegido por el usuario.
+     * Entrega el username unico elegido por la persona.
      *
      * @return username unico
      */
@@ -211,7 +224,7 @@ public class User {
     }
 
     /**
-     * Entrega el nombre visible mostrado en chats, grupos y perfiles.
+     * Entrega el nombre visible del usuario.
      *
      * @return nombre visible
      */
@@ -222,47 +235,43 @@ public class User {
     /**
      * Entrega el correo vinculado al perfil publico.
      *
-     * <p>Este valor conecta la identidad de {@code auth-service} con el perfil
-     * publico. No debe exponerse en endpoints publicos si la respuesta no esta
-     * pensada para el dueno de la cuenta o para servicios internos.
-     *
-     * @return correo del perfil
+     * @return correo del usuario
      */
     public String getEmail() {
         return email;
     }
 
     /**
-     * Entrega el codigo hexadecimal usado para agregar amigos.
+     * Entrega el codigo publico para agregar amigos.
      *
-     * @return codigo de amistad, por ejemplo {@code A91F23C7}
+     * @return codigo hexadecimal de amistad
      */
     public String getFriendCode() {
         return friendCode;
     }
 
     /**
-     * Entrega la URL del avatar mostrado en perfiles y chats.
+     * Entrega la URL del avatar.
      *
-     * @return URL del avatar o null si no existe
+     * @return URL de avatar o null si no existe
      */
     public String getAvatarUrl() {
         return avatarUrl;
     }
 
     /**
-     * Entrega la URL del banner del perfil.
+     * Entrega la URL del banner.
      *
-     * @return URL del banner o null si no existe
+     * @return URL de banner o null si no existe
      */
     public String getBannerUrl() {
         return bannerUrl;
     }
 
     /**
-     * Entrega la biografia publica corta.
+     * Entrega la biografia publica.
      *
-     * @return biografia, vacia si el usuario no configuro una
+     * @return biografia, vacia si no se configuro una
      */
     public String getBio() {
         return bio;
@@ -278,7 +287,7 @@ public class User {
     }
 
     /**
-     * Entrega la regla de visibilidad de la cuenta.
+     * Entrega la visibilidad social de la cuenta.
      *
      * @return visibilidad de la cuenta
      */
@@ -287,7 +296,7 @@ public class User {
     }
 
     /**
-     * Entrega la fecha en que se creo el perfil.
+     * Entrega la fecha de creacion del perfil.
      *
      * @return fecha de creacion
      */
@@ -296,7 +305,7 @@ public class User {
     }
 
     /**
-     * Entrega la fecha de la ultima actualizacion del perfil.
+     * Entrega la fecha de ultima actualizacion.
      *
      * @return fecha de ultima actualizacion
      */
@@ -304,15 +313,10 @@ public class User {
         return updatedAt;
     }
 
-    /**
-     * Entrega una representacion compacta para logs y depuracion.
-     *
-     * @return representacion legible del usuario
-     */
     @Override
     public String toString() {
         return "User{"
-                + "id=" + id.getValue()
+                + "id=" + id
                 + ", username='" + username + '\''
                 + ", displayName='" + displayName + '\''
                 + ", email='" + email + '\''
@@ -338,7 +342,7 @@ public class User {
 
     private static String requireText(String value, String errorMessage) {
         if (value == null || value.isBlank()) {
-            throw new UserGlobalException(errorMessage);
+            throw new InvalidUserDataException(errorMessage);
         }
         return value.trim();
     }
@@ -356,19 +360,15 @@ public class User {
         }
         String normalized = value.trim();
         if (normalized.length() > MAX_BIO_LENGTH) {
-            throw new UserGlobalException("La bio no puede superar " + MAX_BIO_LENGTH + " caracteres.");
+            throw new InvalidUserDataException("La biografia no puede superar 160 caracteres.");
         }
         return normalized;
     }
 
     private static String validateFriendCode(String value) {
-        String normalized = requireText(value, "El friendCode es obligatorio.").toUpperCase();
+        String normalized = requireText(value, "El friend code es obligatorio.").toUpperCase(Locale.ROOT);
         if (!normalized.matches("[0-9A-F]{" + FRIEND_CODE_LENGTH + "}")) {
-            throw new UserGlobalException(
-                    "El friendCode debe ser hexadecimal y tener "
-                            + FRIEND_CODE_LENGTH
-                            + " caracteres."
-            );
+            throw new InvalidUserDataException("El friend code debe ser hexadecimal y tener 8 caracteres.");
         }
         return normalized;
     }

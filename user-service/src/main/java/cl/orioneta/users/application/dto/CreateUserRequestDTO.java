@@ -14,27 +14,22 @@ import jakarta.validation.constraints.Size;
  * @param username username unico elegido por la persona
  * @param displayName nombre visible dentro de Orioneta
  * @param email correo usado para conectar auth con el perfil publico
- * @param avatarUrl URL opcional de la imagen de avatar
- * @param bannerUrl URL opcional del banner del perfil
  * @param bio biografia corta opcional
  */
 public record CreateUserRequestDTO(
-        @NotBlank
-        @Size(min = 3, max = 25)
+        @NotBlank(message = "El username es obligatorio")
+        @Size(min = 3, max = 30, message = "El username debe tener entre 3 y 30 caracteres")
         String username,
 
-        @NotBlank
-        @Size(min = 2, max = 30)
+        @NotBlank(message = "El nombre visible es obligatorio")
+        @Size(min = 2, max = 60, message = "El nombre visible debe tener entre 2 y 60 caracteres")
         String displayName,
 
-        @NotBlank
-        @Email
+        @NotBlank(message = "El email es obligatorio")
+        @Email(message = "El email no tiene un formato valido")
         String email,
 
-        String avatarUrl,
-        String bannerUrl,
-
-        @Size(max = 160)
+        @Size(max = 160, message = "La biografia no puede superar los 160 caracteres")
         String bio
 ) {
 }

@@ -3,15 +3,15 @@ package cl.orioneta.users.application.usecase;
 import cl.orioneta.users.domain.exception.UserNotFoundException;
 import cl.orioneta.users.domain.model.User;
 import cl.orioneta.users.domain.repository.UserRepositoryPort;
-import java.util.UUID;
+import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Caso de uso para obtener un usuario por su identificador interno.
+ * Caso de uso para buscar usuarios mediante su codigo publico de amistad.
  */
 @Service
-public class FindUserByIdUseCase {
+public class FindUserByFriendCodeUseCase {
 
     private final UserRepositoryPort userRepositoryPort;
 
@@ -20,19 +20,19 @@ public class FindUserByIdUseCase {
      *
      * @param userRepositoryPort puerto usado para buscar usuarios
      */
-    public FindUserByIdUseCase(UserRepositoryPort userRepositoryPort) {
+    public FindUserByFriendCodeUseCase(UserRepositoryPort userRepositoryPort) {
         this.userRepositoryPort = userRepositoryPort;
     }
 
     /**
-     * Busca un usuario por id.
+     * Busca el usuario asociado a un friend code.
      *
-     * @param id identificador interno del usuario
+     * @param friendCode codigo publico de amistad
      * @return usuario encontrado
      */
     @Transactional(readOnly = true)
-    public User execute(UUID id) {
-        return userRepositoryPort.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado."));
+    public User execute(String friendCode) {
+        return userRepositoryPort.findByFriendCode(friendCode.toUpperCase(Locale.ROOT))
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con ese friend code."));
     }
 }

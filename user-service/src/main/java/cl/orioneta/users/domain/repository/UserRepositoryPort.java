@@ -2,9 +2,9 @@ package cl.orioneta.users.domain.repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import cl.orioneta.users.domain.model.User;
-import cl.orioneta.users.domain.model.UserID;
 
 /**
  * Puerto de salida usado por los casos de uso para persistir y buscar usuarios.
@@ -30,7 +30,7 @@ public interface UserRepositoryPort {
      * @param id id interno del usuario
      * @return usuario encontrado, si existe
      */
-    Optional<User> findById(UserID id);
+    Optional<User> findById(UUID id);
 
     /**
      * Busca un usuario por username unico.
@@ -92,5 +92,5 @@ public interface UserRepositoryPort {
      *
      * @param id id del usuario a eliminar
      */
-    void deleteById(UserID id);
+    void deleteById(UUID id);
 }

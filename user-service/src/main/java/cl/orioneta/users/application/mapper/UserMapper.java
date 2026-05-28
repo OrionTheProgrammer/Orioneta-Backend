@@ -2,6 +2,7 @@ package cl.orioneta.users.application.mapper;
 
 import cl.orioneta.users.application.dto.UserResponseDTO;
 import cl.orioneta.users.domain.model.User;
+import org.springframework.stereotype.Component;
 
 /**
  * Convierte objetos de dominio de usuario en DTOs de aplicacion.
@@ -10,6 +11,7 @@ import cl.orioneta.users.domain.model.User;
  * controladores y permite que los adaptadores de persistencia evolucionen sin
  * cambiar las respuestas de la API.
  */
+@Component
 public class UserMapper {
 
     /**
@@ -20,7 +22,7 @@ public class UserMapper {
      */
     public UserResponseDTO toResponse(User user) {
         return new UserResponseDTO(
-                user.getId().getValue(),
+                user.getId(),
                 user.getUsername(),
                 user.getDisplayName(),
                 user.getEmail(),
