@@ -2,7 +2,7 @@
 
 ## Java y Spring
 
-- Java 21 como version base.
+- Java 25 LTS como version base.
 - Spring Boot 3.5.x para mantener compatibilidad con Spring Cloud 2025.0.x.
 - Maven multi-modulo para compilar todo desde una raiz comun.
 
