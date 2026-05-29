@@ -23,7 +23,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().authenticated() // seguridad
+                        // .anyRequest().permitAll() // TEST permito todo para probar el programa solo
                 );
         return http.build();
     }
