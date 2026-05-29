@@ -1,8 +1,11 @@
 package cl.orioneta.conversations.domain.exception;
 
+import java.util.UUID;
+
 public class ConversationNotFoundException extends RuntimeException {
 
-    public ConversationNotFoundException(String message) {
-        super(message);
+    // Excepcion por id
+    public ConversationNotFoundException(UUID id) {
+        super("Conversacion no encontrada con id: " + id);
     }
 }
