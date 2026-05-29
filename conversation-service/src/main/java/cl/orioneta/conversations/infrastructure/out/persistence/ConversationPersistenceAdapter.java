@@ -1,5 +1,8 @@
 package cl.orioneta.conversations.infrastructure.out.persistence;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import org.springframework.transaction.annotation.Transactional;
 import cl.orioneta.conversations.domain.model.Conversation;
 import cl.orioneta.conversations.domain.model.ConversationType;
 import cl.orioneta.conversations.domain.model.Participant;
@@ -21,11 +24,42 @@ public class ConversationPersistenceAdapter implements ConversationRepositoryPor
         this.jpaRepository = jpaRepository;
     }
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     @Override
+    @Transactional
     public Conversation save(Conversation conversation) {
         ConversationEntity entity = toEntity(conversation);
-        ConversationEntity saved = jpaRepository.save(entity);
-        return toDomain(saved);
+
+        entityManager.createNativeQuery(
+                        "INSERT INTO conversations (id, title, type, avatar_url, created_by, created_at, updated_at) " +
+                                "VALUES (:id, :title, :type, :avatarUrl, :createdBy, :createdAt, :updatedAt)")
+                .setParameter("id", entity.getId())
+                .setParameter("title", entity.getTitle())
+                .setParameter("type", entity.getType())
+                .setParameter("avatarUrl", entity.getAvatarUrl())
+                .setParameter("createdBy", entity.getCreatedBy())
+                .setParameter("createdAt", entity.getCreatedAt())
+                .setParameter("updatedAt", entity.getUpdatedAt())
+                .executeUpdate();
+
+        for (ParticipantEntity p : entity.getParticipants()) {
+            entityManager.createNativeQuery(
+                            "INSERT INTO participants (id, conversation_id, user_id, role, joined_by, last_read_at, muted, active) " +
+                                    "VALUES (:id, :conversationId, :userId, :role, :joinedBy, :lastReadAt, :muted, :active)")
+                    .setParameter("id", p.getId())
+                    .setParameter("conversationId", entity.getId())
+                    .setParameter("userId", p.getUserId())
+                    .setParameter("role", p.getRole())
+                    .setParameter("joinedBy", p.getJoinedBy())
+                    .setParameter("lastReadAt", p.getLastReadAt())
+                    .setParameter("muted", p.getMuted())
+                    .setParameter("active", p.getActive())
+                    .executeUpdate();
+        }
+
+        return toDomain(entity);
     }
 
     @Override
