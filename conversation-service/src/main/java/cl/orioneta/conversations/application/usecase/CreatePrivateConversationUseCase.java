@@ -36,10 +36,10 @@ public class CreatePrivateConversationUseCase {
                 command.getTitle(), ConversationType.DIRECT, command.getCreatorId()
         );
 
-        // Agregar al creador como ADMIN
+        // Agregar al creador como MEMBER (no ADMIN, es chat directo)
         Participant creator = new Participant(
                 UUID.randomUUID(), conversation.getId(),
-                command.getCreatorId(), ParticipantRole.ADMIN,
+                command.getCreatorId(), ParticipantRole.MEMBER,
                 command.getCreatorId(), null, false, true
         );
 
