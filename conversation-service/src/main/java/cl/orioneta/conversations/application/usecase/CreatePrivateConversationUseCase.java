@@ -1,10 +1,12 @@
 package cl.orioneta.conversations.application.usecase;
 
 import cl.orioneta.conversations.application.command.CreatePrivateConversationCommand;
+import cl.orioneta.conversations.domain.event.ConversationCreatedEvent;
 import cl.orioneta.conversations.domain.model.Conversation;
 import cl.orioneta.conversations.domain.model.ConversationType;
 import cl.orioneta.conversations.domain.model.Participant;
 import cl.orioneta.conversations.domain.model.ParticipantRole;
+import cl.orioneta.conversations.domain.service.ConversationEventPublisherPort;
 import cl.orioneta.conversations.domain.repository.ConversationRepositoryPort;
 import cl.orioneta.conversations.domain.service.ConversationDomainService;
 
@@ -14,10 +16,12 @@ public class CreatePrivateConversationUseCase {
 
     private final ConversationRepositoryPort conversationRepository;
     private final ConversationDomainService conversationDomainService;
+    private final ConversationEventPublisherPort eventPublisher;
 
-    public CreatePrivateConversationUseCase(ConversationRepositoryPort conversationRepository, ConversationDomainService conversationDomainService) {
+    public CreatePrivateConversationUseCase(ConversationRepositoryPort conversationRepository, ConversationDomainService conversationDomainService, ConversationEventPublisherPort eventPublisher) {
         this.conversationRepository = conversationRepository;
         this.conversationDomainService = conversationDomainService;
+        this.eventPublisher = eventPublisher;
     }
 
     public Conversation execute(CreatePrivateConversationCommand command) {
@@ -50,6 +54,13 @@ public class CreatePrivateConversationUseCase {
         conversation.addParticipant(recipient);
 
         // Persistir y retornar
-        return conversationRepository.save(conversation);
+        Conversation saved = conversationRepository.save(conversation);
+
+        // Publicar evento
+        eventPublisher.publishConversationCreated(new ConversationCreatedEvent(
+                saved.getId(), saved.getType(), saved.getCreatedBy()
+        ));
+
+        return saved;
     }
 }

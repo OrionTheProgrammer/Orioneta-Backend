@@ -1,10 +1,12 @@
 package cl.orioneta.conversations.application.usecase;
 
 import cl.orioneta.conversations.application.command.AddParticipantCommand;
+import cl.orioneta.conversations.domain.event.ParticipantAddedEvent;
 import cl.orioneta.conversations.domain.exception.ConversationNotFoundException;
 import cl.orioneta.conversations.domain.model.Conversation;
 import cl.orioneta.conversations.domain.model.Participant;
 import cl.orioneta.conversations.domain.model.ParticipantRole;
+import cl.orioneta.conversations.domain.service.ConversationEventPublisherPort;
 import cl.orioneta.conversations.domain.repository.ConversationRepositoryPort;
 import cl.orioneta.conversations.domain.service.ConversationDomainService;
 
@@ -14,10 +16,12 @@ public class AddParticipantUseCase {
 
     private final ConversationRepositoryPort conversationRepository;
     private final ConversationDomainService conversationDomainService;
+    private final ConversationEventPublisherPort eventPublisher;
 
-    public AddParticipantUseCase(ConversationRepositoryPort conversationRepository, ConversationDomainService conversationDomainService) {
+    public AddParticipantUseCase(ConversationRepositoryPort conversationRepository, ConversationDomainService conversationDomainService, ConversationEventPublisherPort eventPublisher) {
         this.conversationRepository = conversationRepository;
         this.conversationDomainService = conversationDomainService;
+        this.eventPublisher = eventPublisher;
     }
 
     public Conversation execute(AddParticipantCommand command){
@@ -40,8 +44,13 @@ public class AddParticipantUseCase {
         ));
 
         // Persistir (guardar) y retornar
-        return conversationRepository.save(conversation);
+        Conversation saved = conversationRepository.save(conversation);
 
+        // Publicar evento
+        eventPublisher.publishParticipantAdded(new ParticipantAddedEvent(
+                saved.getId(), command.getNewUserId(), command.getRequestingUserId()
+        ));
 
+        return saved;
     }
 }
