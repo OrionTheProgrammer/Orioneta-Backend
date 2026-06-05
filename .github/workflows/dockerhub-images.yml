@@ -245,6 +245,23 @@ jobs:
           export DOCKER_CLIENT_TIMEOUT=300
           export COMPOSE_HTTP_TIMEOUT=300
 
+          retry_docker_login() {
+            for attempt in 1 2 3 4 5; do
+              echo "Login en DockerHub desde EC2 (intento ${attempt}/5)"
+
+              if printf '%s' "$DOCKERHUB_TOKEN" | timeout 90 "${docker_cmd[@]}" login -u "$DOCKERHUB_USERNAME" --password-stdin; then
+                return 0
+              fi
+
+              if [ "$attempt" -eq 5 ]; then
+                echo "No se pudo iniciar sesion en DockerHub despues de 5 intentos."
+                return 1
+              fi
+
+              sleep $((attempt * 20))
+            done
+          }
+
           retry_compose_pull() {
             service="$1"
 
@@ -264,7 +281,7 @@ jobs:
             done
           }
 
-          printf '%s' "$DOCKERHUB_TOKEN" | "${docker_cmd[@]}" login -u "$DOCKERHUB_USERNAME" --password-stdin
+          retry_docker_login
 
           services="$("${docker_cmd[@]}" compose -f docker-compose.prod.yml config --services)"
 
