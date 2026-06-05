@@ -61,6 +61,44 @@ Convencion de nombres:
 
 El pipeline publica tags por rama (`develop`, `main`), por SHA corto (`sha-xxxxxxxxxxxx`) y `latest` cuando el commit entra a `main`.
 
+## Despliegue en EC2
+
+El workflow `.github/workflows/deploy-ec2.yml` despliega la pila Docker Compose en una instancia EC2 despues de que el pipeline de imagenes termine correctamente. Tambien puede ejecutarse manualmente desde GitHub Actions.
+
+Secretos requeridos:
+
+```txt
+EC2_HOST
+EC2_PORT
+EC2_USER
+EC2_SSH_KEY
+DOCKERHUB_USERNAME
+DOCKERHUB_TOKEN
+```
+
+La EC2 debe tener Docker y Docker Compose instalados. El workflow copia estos archivos a `~/orioneta-backend` dentro de la instancia:
+
+```txt
+docker-compose.prod.yml
+docker/postgres/init/01-create-databases.sql
+docker/prometheus/prometheus.prod.yml
+```
+
+Luego ejecuta:
+
+```bash
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d --remove-orphans
+```
+
+El gateway queda publicado en:
+
+```txt
+http://<EC2_HOST>:8080
+```
+
+Prometheus, Grafana y RabbitMQ Management quedan vinculados a `127.0.0.1` en la EC2 para evitar exponerlos publicamente. Para revisarlos se recomienda usar tunel SSH.
+
 ## Pruebas locales con H2 y Swagger
 
 Para probar un microservicio sin PostgreSQL usa el perfil `dev-h2`. Este perfil crea una base H2 en memoria, carga datos de prueba cuando el modulo ya tiene entidades JPA implementadas y habilita la consola H2.

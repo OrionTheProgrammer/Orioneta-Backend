@@ -1,0 +1,337 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: orioneta-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-orioneta}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-orioneta} -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: orioneta-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-orioneta}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-orioneta}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "127.0.0.1:15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: orioneta-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  gateway-service:
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-gateway-service:${IMAGE_TAG:-develop}
+    container_name: orioneta-gateway-service
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ORIONETA_AUTH_URL: http://auth-service:8082
+      ORIONETA_BFF_URL: http://bff-service:8081
+      ORIONETA_USER_URL: http://user-service:8083
+      ORIONETA_FRIENDSHIP_URL: http://friendship-service:8084
+      ORIONETA_CONVERSATION_URL: http://conversation-service:8085
+      ORIONETA_MESSAGE_URL: http://message-service:8086
+      ORIONETA_NOTIFICATION_URL: http://notification-service:8087
+      ORIONETA_CUSTOMIZATION_URL: http://customization-service:8088
+      ORIONETA_MEDIA_URL: http://media-service:8089
+      ORIONETA_NETA_MARKET_URL: http://neta-market-service:8090
+      ORIONETA_REALTIME_URL: http://realtime-service:8091
+      ORIONETA_MODERATION_URL: http://moderation-service:8092
+      ORIONETA_AUDIT_URL: http://audit-service:8093
+    depends_on:
+      - auth-service
+      - bff-service
+      - user-service
+      - friendship-service
+      - conversation-service
+      - message-service
+      - notification-service
+      - customization-service
+      - media-service
+      - neta-market-service
+      - realtime-service
+      - moderation-service
+      - audit-service
+
+  bff-service:
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-bff-service:${IMAGE_TAG:-develop}
+    container_name: orioneta-bff-service
+    restart: unless-stopped
+    environment:
+      ORIONETA_AUTH_URL: http://auth-service:8082
+      ORIONETA_USER_URL: http://user-service:8083
+      ORIONETA_FRIENDSHIP_URL: http://friendship-service:8084
+      ORIONETA_CONVERSATION_URL: http://conversation-service:8085
+      ORIONETA_MESSAGE_URL: http://message-service:8086
+      ORIONETA_NOTIFICATION_URL: http://notification-service:8087
+      ORIONETA_CUSTOMIZATION_URL: http://customization-service:8088
+      ORIONETA_MEDIA_URL: http://media-service:8089
+      ORIONETA_NETA_MARKET_URL: http://neta-market-service:8090
+
+  auth-service:
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-auth-service:${IMAGE_TAG:-develop}
+    container_name: orioneta-auth-service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_auth
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
+      ORIONETA_JWT_ISSUER: ${ORIONETA_JWT_ISSUER:-orioneta-auth-service}
+      ORIONETA_JWT_SECRET: ${ORIONETA_JWT_SECRET:?Define ORIONETA_JWT_SECRET}
+      ORIONETA_OAUTH2_SUCCESS_REDIRECT_URI: ${ORIONETA_OAUTH2_SUCCESS_REDIRECT_URI:-http://localhost:5173/auth/oauth2/callback}
+      ORIONETA_OAUTH2_FAILURE_REDIRECT_URI: ${ORIONETA_OAUTH2_FAILURE_REDIRECT_URI:-http://localhost:5173/auth/oauth2/error}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-dev-google-client-id}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-dev-google-client-secret}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-dev-github-client-id}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-dev-github-client-secret}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  user-service:
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-user-service:${IMAGE_TAG:-develop}
+    container_name: orioneta-user-service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_users
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  friendship-service:
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-friendship-service:${IMAGE_TAG:-develop}
+    container_name: orioneta-friendship-service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_friendships
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-orioneta}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-orioneta}
+      ORIONETA_SERVICES_USERS: http://user-service:8083
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+
+  conversation-service:
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-conversation-service:${IMAGE_TAG:-develop}
+    container_name: orioneta-conversation-service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_conversations
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-orioneta}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-orioneta}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  message-service:
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-message-service:${IMAGE_TAG:-develop}
+    container_name: orioneta-message-service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_messages
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-orioneta}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-orioneta}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  notification-service:
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-notification-service:${IMAGE_TAG:-develop}
+    container_name: orioneta-notification-service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_notifications
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-orioneta}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-orioneta}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  customization-service:
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-customization-service:${IMAGE_TAG:-develop}
+    container_name: orioneta-customization-service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_customization
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-orioneta}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-orioneta}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  media-service:
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-media-service:${IMAGE_TAG:-develop}
+    container_name: orioneta-media-service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_media
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  neta-market-service:
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-neta-market-service:${IMAGE_TAG:-develop}
+    container_name: orioneta-neta-market-service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_neta_market
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-orioneta}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-orioneta}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  realtime-service:
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-realtime-service:${IMAGE_TAG:-develop}
+    container_name: orioneta-realtime-service
+    restart: unless-stopped
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-orioneta}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-orioneta}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  moderation-service:
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-moderation-service:${IMAGE_TAG:-develop}
+    container_name: orioneta-moderation-service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_moderation
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-orioneta}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-orioneta}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  audit-service:
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-audit-service:${IMAGE_TAG:-develop}
+    container_name: orioneta-audit-service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_audit
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-orioneta}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-orioneta}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: orioneta-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - gateway-service
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: orioneta-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-orioneta}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-orioneta}
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  redis_data:
+  grafana_data:

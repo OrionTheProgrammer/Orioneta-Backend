@@ -1,0 +1,22 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "orioneta-services"
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      - targets:
+          - "gateway-service:8080"
+          - "bff-service:8081"
+          - "auth-service:8082"
+          - "user-service:8083"
+          - "friendship-service:8084"
+          - "conversation-service:8085"
+          - "message-service:8086"
+          - "notification-service:8087"
+          - "customization-service:8088"
+          - "media-service:8089"
+          - "neta-market-service:8090"
+          - "realtime-service:8091"
+          - "moderation-service:8092"
+          - "audit-service:8093"
