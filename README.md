@@ -23,7 +23,7 @@ Backend de Orioneta basado en microservicios con Spring Boot, Spring Cloud Gatew
 
 ## Requisitos
 
-- Java 21
+- Java 25 LTS
 - Maven 3.9+
 - Docker y Docker Compose
 

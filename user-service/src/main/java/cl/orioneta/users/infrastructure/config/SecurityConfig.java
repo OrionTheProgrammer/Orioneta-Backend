@@ -6,6 +6,13 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
+/**
+ * Configuracion de seguridad del user-service.
+ *
+ * <p>Durante el MVP los endpoints quedan abiertos para probar rapido con
+ * Swagger/Postman. Cuando auth-service emita JWT reales, se puede cambiar
+ * {@code permitAll()} por {@code authenticated()} y activar Resource Server.</p>
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
