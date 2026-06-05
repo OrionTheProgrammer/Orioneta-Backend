@@ -4,12 +4,13 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Evento publicado cuando un usuario envia una solicitud de amistad.
+ * Evento publicado cuando una solicitud de amistad es aceptada.
  */
-public record FriendRequestSentEvent(
+public record FriendRequestAcceptedEvent(
         UUID requestId,
+        UUID friendshipId,
         UUID senderUserId,
         UUID receiverUserId,
-        LocalDateTime createdAt
+        LocalDateTime acceptedAt
 ) {
 }

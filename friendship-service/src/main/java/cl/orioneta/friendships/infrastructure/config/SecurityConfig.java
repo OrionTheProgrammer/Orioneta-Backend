@@ -6,6 +6,13 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
+/**
+ * Seguridad del friendship-service.
+ *
+ * <p>Durante el MVP deja los endpoints abiertos para pruebas. Cuando
+ * auth-service este conectado, se cambia {@code permitAll()} por
+ * {@code authenticated()} y se activa Resource Server con JWT.</p>
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
