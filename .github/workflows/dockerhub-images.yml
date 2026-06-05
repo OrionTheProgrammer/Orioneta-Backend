@@ -125,12 +125,36 @@ jobs:
           printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > "$HOME/.ssh/orioneta-ec2"
           chmod 600 "$HOME/.ssh/orioneta-ec2"
 
-          if ! timeout 20 bash -c "</dev/tcp/${{ secrets.EC2_HOST }}/${{ secrets.EC2_PORT }}"; then
+          ec2_reachable=false
+
+          for attempt in 1 2 3 4 5 6; do
+            echo "Probando conexion SSH hacia EC2 (intento ${attempt}/6)"
+
+            if timeout 20 bash -c "</dev/tcp/${{ secrets.EC2_HOST }}/${{ secrets.EC2_PORT }}"; then
+              ec2_reachable=true
+              break
+            fi
+
+            sleep $((attempt * 10))
+          done
+
+          if [ "$ec2_reachable" != "true" ]; then
             echo "::error::No se pudo abrir una conexion TCP hacia EC2. Revisa EC2_HOST, EC2_PORT y el Security Group inbound para SSH."
             exit 1
           fi
 
-          ssh-keyscan -T 20 -p "${{ secrets.EC2_PORT }}" "${{ secrets.EC2_HOST }}" >> "$HOME/.ssh/known_hosts"
+          for attempt in 1 2 3; do
+            if ssh-keyscan -T 20 -p "${{ secrets.EC2_PORT }}" "${{ secrets.EC2_HOST }}" >> "$HOME/.ssh/known_hosts"; then
+              break
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::No se pudo obtener la llave publica SSH de EC2."
+              exit 1
+            fi
+
+            sleep $((attempt * 10))
+          done
 
       - name: Upload deployment files
         run: |
