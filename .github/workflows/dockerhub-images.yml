@@ -178,6 +178,7 @@ jobs:
           GOOGLE_CLIENT_SECRET=dev-google-client-secret
           GITHUB_CLIENT_ID=dev-github-client-id
           GITHUB_CLIENT_SECRET=dev-github-client-secret
+          COMPOSE_PROFILES=
           EOF
           fi
 
@@ -200,7 +201,7 @@ jobs:
           port="${{ secrets.EC2_PORT }}"
           key="$HOME/.ssh/orioneta-ec2"
 
-          ssh -i "$key" -p "$port" -o BatchMode=yes -o ConnectTimeout=20 "$remote" \
+          ssh -i "$key" -p "$port" -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=10 "$remote" \
             "DOCKERHUB_USERNAME='${{ secrets.DOCKERHUB_USERNAME }}' DOCKERHUB_TOKEN='${{ secrets.DOCKERHUB_TOKEN }}' bash -s" <<'REMOTE'
           set -euo pipefail
 

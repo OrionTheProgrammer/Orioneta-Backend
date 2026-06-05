@@ -91,6 +91,37 @@ docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d --remove-orphans
 ```
 
+Por defecto se despliega el nucleo minimo para una EC2 pequena:
+
+```txt
+gateway-service
+bff-service
+auth-service
+user-service
+friendship-service
+postgres
+rabbitmq
+redis
+```
+
+Los servicios mas pesados quedan detras de perfiles Docker Compose. Para activar mas modulos, edita `~/orioneta-backend/.env` en la EC2 y define `COMPOSE_PROFILES`:
+
+```txt
+COMPOSE_PROFILES=messaging,realtime,customization,media,market,audit,observability
+```
+
+Perfiles disponibles:
+
+```txt
+messaging      conversation-service, message-service, notification-service
+realtime       realtime-service
+customization  customization-service
+media          media-service
+market         neta-market-service, moderation-service
+audit          audit-service
+observability  prometheus, grafana
+```
+
 El gateway queda publicado en:
 
 ```txt

@@ -70,15 +70,6 @@ services:
       - bff-service
       - user-service
       - friendship-service
-      - conversation-service
-      - message-service
-      - notification-service
-      - customization-service
-      - media-service
-      - neta-market-service
-      - realtime-service
-      - moderation-service
-      - audit-service
 
   bff-service:
     image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-bff-service:${IMAGE_TAG:-develop}
@@ -149,6 +140,8 @@ services:
         condition: service_started
 
   conversation-service:
+    profiles:
+      - messaging
     image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-conversation-service:${IMAGE_TAG:-develop}
     container_name: orioneta-conversation-service
     restart: unless-stopped
@@ -167,6 +160,8 @@ services:
         condition: service_healthy
 
   message-service:
+    profiles:
+      - messaging
     image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-message-service:${IMAGE_TAG:-develop}
     container_name: orioneta-message-service
     restart: unless-stopped
@@ -185,6 +180,8 @@ services:
         condition: service_healthy
 
   notification-service:
+    profiles:
+      - messaging
     image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-notification-service:${IMAGE_TAG:-develop}
     container_name: orioneta-notification-service
     restart: unless-stopped
@@ -203,6 +200,8 @@ services:
         condition: service_healthy
 
   customization-service:
+    profiles:
+      - customization
     image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-customization-service:${IMAGE_TAG:-develop}
     container_name: orioneta-customization-service
     restart: unless-stopped
@@ -221,6 +220,8 @@ services:
         condition: service_healthy
 
   media-service:
+    profiles:
+      - media
     image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-media-service:${IMAGE_TAG:-develop}
     container_name: orioneta-media-service
     restart: unless-stopped
@@ -233,6 +234,8 @@ services:
         condition: service_healthy
 
   neta-market-service:
+    profiles:
+      - market
     image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-neta-market-service:${IMAGE_TAG:-develop}
     container_name: orioneta-neta-market-service
     restart: unless-stopped
@@ -251,6 +254,8 @@ services:
         condition: service_healthy
 
   realtime-service:
+    profiles:
+      - realtime
     image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-realtime-service:${IMAGE_TAG:-develop}
     container_name: orioneta-realtime-service
     restart: unless-stopped
@@ -268,6 +273,8 @@ services:
         condition: service_healthy
 
   moderation-service:
+    profiles:
+      - market
     image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-moderation-service:${IMAGE_TAG:-develop}
     container_name: orioneta-moderation-service
     restart: unless-stopped
@@ -286,6 +293,8 @@ services:
         condition: service_healthy
 
   audit-service:
+    profiles:
+      - audit
     image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-audit-service:${IMAGE_TAG:-develop}
     container_name: orioneta-audit-service
     restart: unless-stopped
@@ -304,6 +313,8 @@ services:
         condition: service_healthy
 
   prometheus:
+    profiles:
+      - observability
     image: prom/prometheus:v2.55.1
     container_name: orioneta-prometheus
     restart: unless-stopped
@@ -317,6 +328,8 @@ services:
       - gateway-service
 
   grafana:
+    profiles:
+      - observability
     image: grafana/grafana:11.3.0
     container_name: orioneta-grafana
     restart: unless-stopped
