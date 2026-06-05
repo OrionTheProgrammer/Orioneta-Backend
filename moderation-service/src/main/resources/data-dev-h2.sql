@@ -1,0 +1,4 @@
+INSERT INTO moderation_reviews (id, target_id, target_type, reviewer_id, status, reason, created_at, resolved_at)
+VALUES
+    ('70000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000002', 'NETA_TEMPLATE', NULL, 'PENDING', 'Template pendiente para revision local.', TIMESTAMP '2026-06-05 09:15:00', NULL),
+    ('70000000-0000-0000-0000-000000000002', '60000000-0000-0000-0000-000000000001', 'NETA_TEMPLATE', '33333333-3333-3333-3333-333333333333', 'APPROVED', 'Template aprobado para pruebas.', TIMESTAMP '2026-06-05 09:05:00', TIMESTAMP '2026-06-05 09:08:00');
