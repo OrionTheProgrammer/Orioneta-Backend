@@ -18,7 +18,7 @@ concurrency:
 
 env:
   IMAGE_PREFIX: orioneta
-  JAVA_VERSION: "21"
+  JAVA_VERSION: "25"
 
   SERVICES: >-
     gateway-service
@@ -38,6 +38,7 @@ env:
 
   MVP_SERVICES: >-
     gateway-service
+    bff-service
     auth-service
     user-service
     friendship-service
@@ -129,10 +130,12 @@ jobs:
             should_deploy="false"
           fi
 
-          echo "changed_services=${changed_services}" >> "$GITHUB_OUTPUT"
-          echo "has_service_changes=${has_service_changes}" >> "$GITHUB_OUTPUT"
-          echo "deploy_files_changed=${deploy_files_changed}" >> "$GITHUB_OUTPUT"
-          echo "should_deploy=${should_deploy}" >> "$GITHUB_OUTPUT"
+          {
+            echo "changed_services=${changed_services}"
+            echo "has_service_changes=${has_service_changes}"
+            echo "deploy_files_changed=${deploy_files_changed}"
+            echo "should_deploy=${should_deploy}"
+          } >> "$GITHUB_OUTPUT"
 
           echo "Changed services: ${changed_services}"
           echo "Has service changes: ${has_service_changes}"
@@ -192,9 +195,11 @@ jobs:
             image_tag="$safe_ref"
           fi
 
-          echo "short_sha=${short_sha}" >> "$GITHUB_OUTPUT"
-          echo "safe_ref=${safe_ref}" >> "$GITHUB_OUTPUT"
-          echo "image_tag=${image_tag}" >> "$GITHUB_OUTPUT"
+          {
+            echo "short_sha=${short_sha}"
+            echo "safe_ref=${safe_ref}"
+            echo "image_tag=${image_tag}"
+          } >> "$GITHUB_OUTPUT"
 
           echo "Image tag: ${image_tag}"
 
@@ -300,7 +305,111 @@ jobs:
             exit 1
           fi
 
-          ssh-keyscan -T 20 -p "${{ secrets.EC2_PORT }}" "${{ secrets.EC2_HOST }}" >> "$HOME/.ssh/known_hosts"
+          for attempt in 1 2 3; do
+            if ssh-keyscan -T 20 -p "${{ secrets.EC2_PORT }}" "${{ secrets.EC2_HOST }}" >> "$HOME/.ssh/known_hosts"; then
+              break
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Could not read EC2 SSH host key."
+              exit 1
+            fi
+
+            sleep $((attempt * 10))
+          done
+
+      - name: Prepare Amazon Linux host
+        run: |
+          set -euo pipefail
+
+          remote="${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}"
+          port="${{ secrets.EC2_PORT }}"
+          key="$HOME/.ssh/orioneta-ec2"
+
+          ssh -i "$key" -p "$port" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=20 \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=10 \
+            "$remote" bash -s <<'REMOTE'
+          set -euo pipefail
+
+          if [ -f /etc/os-release ]; then
+            . /etc/os-release
+            echo "Remote OS: ${PRETTY_NAME:-unknown}"
+          fi
+
+          install_packages() {
+            if command -v dnf >/dev/null 2>&1; then
+              sudo -n dnf install -y "$@"
+            elif command -v yum >/dev/null 2>&1; then
+              sudo -n yum install -y "$@"
+            else
+              echo "No supported package manager found. Expected dnf or yum on Amazon Linux."
+              return 1
+            fi
+          }
+
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "Installing Docker..."
+
+            if command -v amazon-linux-extras >/dev/null 2>&1; then
+              sudo -n amazon-linux-extras install docker -y || install_packages docker
+            else
+              install_packages docker
+            fi
+          fi
+
+          install_packages openssl curl ca-certificates || true
+
+          sudo -n systemctl enable --now docker
+
+          if ! docker compose version >/dev/null 2>&1 && ! sudo -n docker compose version >/dev/null 2>&1; then
+            echo "Installing Docker Compose plugin..."
+
+            install_packages docker-compose-plugin || true
+          fi
+
+          if ! docker compose version >/dev/null 2>&1 && ! sudo -n docker compose version >/dev/null 2>&1; then
+            echo "Installing Docker Compose plugin from GitHub release..."
+
+            install_packages curl ca-certificates || true
+
+            arch="$(uname -m)"
+            case "$arch" in
+              x86_64) compose_arch="x86_64" ;;
+              aarch64|arm64) compose_arch="aarch64" ;;
+              *)
+                echo "Unsupported architecture for Docker Compose plugin: ${arch}"
+                exit 1
+                ;;
+            esac
+
+            sudo -n mkdir -p /usr/local/lib/docker/cli-plugins
+            sudo -n curl -fsSL --retry 5 --retry-delay 5 \
+              "https://github.com/docker/compose/releases/download/v2.32.4/docker-compose-linux-${compose_arch}" \
+              -o /usr/local/lib/docker/cli-plugins/docker-compose
+            sudo -n chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+          fi
+
+          if docker info >/dev/null 2>&1; then
+            docker_cmd=(docker)
+          elif sudo -n docker info >/dev/null 2>&1; then
+            docker_cmd=(sudo -n docker)
+          else
+            echo "Docker is installed but cannot be used by this SSH user."
+            echo "Use an Amazon Linux user with passwordless sudo, usually ec2-user."
+            exit 1
+          fi
+
+          echo "Docker version:"
+          "${docker_cmd[@]}" --version
+
+          echo "Docker Compose version:"
+          "${docker_cmd[@]}" compose version
+
+          mkdir -p ~/orioneta-backend/docker/postgres/init ~/orioneta-backend/docker/prometheus
+          REMOTE
 
       - name: Upload deployment files
         run: |
@@ -311,7 +420,7 @@ jobs:
           key="$HOME/.ssh/orioneta-ec2"
 
           ssh -i "$key" -p "$port" -o BatchMode=yes -o ConnectTimeout=20 "$remote" \
-            "mkdir -p ~/orioneta-backend/docker/postgres/init"
+            "mkdir -p ~/orioneta-backend/docker/postgres/init ~/orioneta-backend/docker/prometheus"
 
           scp -i "$key" -P "$port" -o BatchMode=yes -o ConnectTimeout=20 \
             docker-compose.prod.yml \
@@ -320,6 +429,10 @@ jobs:
           scp -i "$key" -P "$port" -o BatchMode=yes -o ConnectTimeout=20 \
             docker/postgres/init/01-create-databases.sql \
             "$remote:~/orioneta-backend/docker/postgres/init/01-create-databases.sql"
+
+          scp -i "$key" -P "$port" -o BatchMode=yes -o ConnectTimeout=20 \
+            docker/prometheus/prometheus.prod.yml \
+            "$remote:~/orioneta-backend/docker/prometheus/prometheus.prod.yml"
 
       - name: Prepare remote environment
         env:
@@ -353,6 +466,8 @@ jobs:
 
           RABBITMQ_DEFAULT_USER=orioneta
           RABBITMQ_DEFAULT_PASS=orioneta
+          COMPOSE_PROFILES=
+          JAVA_TOOL_OPTIONS=-Xms64m -Xmx256m
 
           ORIONETA_JWT_ISSUER=orioneta-auth-service
           ORIONETA_JWT_SECRET=${jwt_secret}
@@ -434,12 +549,26 @@ jobs:
           echo "Checking compose config..."
           "${docker_cmd[@]}" compose -f docker-compose.prod.yml config >/dev/null
 
-          echo "Login to DockerHub..."
-          printf '%s\n' "$DOCKERHUB_TOKEN" | "${docker_cmd[@]}" login docker.io -u "$DOCKERHUB_USERNAME" --password-stdin
-          echo "DockerHub login OK"
+          retry_docker_login() {
+            for attempt in 1 2 3 4 5; do
+              echo "Login to DockerHub. Attempt ${attempt}/5"
+
+              if printf '%s\n' "$DOCKERHUB_TOKEN" | timeout 90 "${docker_cmd[@]}" login docker.io -u "$DOCKERHUB_USERNAME" --password-stdin; then
+                echo "DockerHub login OK"
+                return 0
+              fi
+
+              if [ "$attempt" -eq 5 ]; then
+                echo "DockerHub login failed after 5 attempts"
+                return 1
+              fi
+
+              sleep $((attempt * 20))
+            done
+          }
 
           INFRA_SERVICES="postgres rabbitmq"
-          MVP_APP_SERVICES="auth-service user-service friendship-service gateway-service"
+          MVP_APP_SERVICES="auth-service user-service friendship-service bff-service gateway-service"
 
           if [ -z "${CHANGED_SERVICES}" ]; then
             CHANGED_SERVICES=""
@@ -540,7 +669,14 @@ jobs:
             "${docker_cmd[@]}" compose -f docker-compose.prod.yml up -d --no-deps "$service"
           }
 
+          retry_docker_login
+
           ensure_infra
+
+          if [ -z "$("${docker_cmd[@]}" compose -f docker-compose.prod.yml ps -q gateway-service 2>/dev/null || true)" ]; then
+            echo "Gateway is not running yet. Deploying the complete MVP app set."
+            CHANGED_SERVICES="$MVP_APP_SERVICES"
+          fi
 
           if [ -z "$CHANGED_SERVICES" ] && [ "$DEPLOY_FILES_CHANGED" = "true" ]; then
             echo "No app image changed, but deploy files changed."

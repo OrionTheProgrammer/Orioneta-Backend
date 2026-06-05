@@ -42,7 +42,7 @@ mvn -pl auth-service spring-boot:run
 
 ## Imagenes Docker
 
-El pipeline `.github/workflows/dockerhub-images.yml` compila el reactor Maven, ejecuta las pruebas y publica una imagen por microservicio en DockerHub.
+El pipeline `.github/workflows/dockerhub-images.yml` detecta servicios modificados, compila el reactor Maven, ejecuta las pruebas y publica en DockerHub solo las imagenes necesarias. En ejecucion manual o tag construye el conjunto MVP.
 
 Secretos requeridos en GitHub Actions:
 
@@ -59,11 +59,11 @@ Convencion de nombres:
 <DOCKERHUB_USERNAME>/orioneta-friendship-service
 ```
 
-El pipeline publica tags por rama (`develop`, `main`), por SHA corto (`sha-xxxxxxxxxxxx`) y `latest` cuando el commit entra a `main`.
+El pipeline publica tags por SHA corto (`sha-xxxxxxxxxxxx`) y por destino de despliegue. En `main` publica `latest`; en otras ramas usa el nombre normalizado de la rama.
 
 ## Despliegue en EC2
 
-El workflow `.github/workflows/dockerhub-images.yml` despliega la pila Docker Compose en una instancia EC2 despues de publicar correctamente las imagenes Docker.
+El workflow `.github/workflows/dockerhub-images.yml` despliega la pila Docker Compose en una instancia EC2 Amazon Linux despues de publicar correctamente las imagenes Docker. El deploy automatico queda limitado a `main`; en `develop` solo se validan y publican las imagenes necesarias.
 
 Secretos requeridos:
 
@@ -76,7 +76,16 @@ DOCKERHUB_USERNAME
 DOCKERHUB_TOKEN
 ```
 
-La EC2 debe tener Docker y Docker Compose instalados. El workflow copia estos archivos a `~/orioneta-backend` dentro de la instancia:
+Para Amazon Linux, usa normalmente:
+
+```txt
+EC2_USER=ec2-user
+EC2_PORT=22
+```
+
+La instancia debe permitir SSH desde GitHub Actions en su Security Group. El workflow intenta preparar la maquina de forma idempotente: instala Docker si falta, habilita el servicio `docker`, verifica Docker Compose y usa `sudo docker` cuando el usuario aun no pertenece al grupo `docker`.
+
+El workflow copia estos archivos a `~/orioneta-backend` dentro de la instancia:
 
 ```txt
 docker-compose.prod.yml
@@ -84,11 +93,13 @@ docker/postgres/init/01-create-databases.sql
 docker/prometheus/prometheus.prod.yml
 ```
 
-Luego ejecuta:
+Luego aplica un despliegue incremental:
 
-```bash
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d --remove-orphans
+```txt
+1. Asegura servicios de infraestructura.
+2. Descarga imagenes solo de los servicios necesarios.
+3. Recrea solo servicios nuevos, cambiados o afectados por cambios de Compose.
+4. Limpia imagenes sin uso.
 ```
 
 Por defecto se despliega el nucleo minimo para una EC2 pequena:
@@ -101,7 +112,6 @@ user-service
 friendship-service
 postgres
 rabbitmq
-redis
 ```
 
 Los servicios mas pesados quedan detras de perfiles Docker Compose. Para activar mas modulos, edita `~/orioneta-backend/.env` en la EC2 y define `COMPOSE_PROFILES`:

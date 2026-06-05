@@ -1,3 +1,7 @@
+x-spring-common-env: &spring-common-env
+  SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+  JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms64m -Xmx256m}
+
 services:
   postgres:
     image: postgres:16
@@ -34,6 +38,8 @@ services:
       retries: 10
 
   redis:
+    profiles:
+      - realtime
     image: redis:7
     container_name: orioneta-redis
     restart: unless-stopped
@@ -46,12 +52,13 @@ services:
       retries: 10
 
   gateway-service:
-    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-gateway-service:${IMAGE_TAG:-develop}
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-gateway-service:${IMAGE_TAG:-latest}
     container_name: orioneta-gateway-service
     restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
+      <<: *spring-common-env
       ORIONETA_AUTH_URL: http://auth-service:8082
       ORIONETA_BFF_URL: http://bff-service:8081
       ORIONETA_USER_URL: http://user-service:8083
@@ -72,10 +79,11 @@ services:
       - friendship-service
 
   bff-service:
-    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-bff-service:${IMAGE_TAG:-develop}
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-bff-service:${IMAGE_TAG:-latest}
     container_name: orioneta-bff-service
     restart: unless-stopped
     environment:
+      <<: *spring-common-env
       ORIONETA_AUTH_URL: http://auth-service:8082
       ORIONETA_USER_URL: http://user-service:8083
       ORIONETA_FRIENDSHIP_URL: http://friendship-service:8084
@@ -87,10 +95,11 @@ services:
       ORIONETA_NETA_MARKET_URL: http://neta-market-service:8090
 
   auth-service:
-    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-auth-service:${IMAGE_TAG:-develop}
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-auth-service:${IMAGE_TAG:-latest}
     container_name: orioneta-auth-service
     restart: unless-stopped
     environment:
+      <<: *spring-common-env
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_auth
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
@@ -107,10 +116,11 @@ services:
         condition: service_healthy
 
   user-service:
-    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-user-service:${IMAGE_TAG:-develop}
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-user-service:${IMAGE_TAG:-latest}
     container_name: orioneta-user-service
     restart: unless-stopped
     environment:
+      <<: *spring-common-env
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_users
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
@@ -119,10 +129,11 @@ services:
         condition: service_healthy
 
   friendship-service:
-    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-friendship-service:${IMAGE_TAG:-develop}
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-friendship-service:${IMAGE_TAG:-latest}
     container_name: orioneta-friendship-service
     restart: unless-stopped
     environment:
+      <<: *spring-common-env
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_friendships
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
@@ -142,10 +153,11 @@ services:
   conversation-service:
     profiles:
       - messaging
-    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-conversation-service:${IMAGE_TAG:-develop}
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-conversation-service:${IMAGE_TAG:-latest}
     container_name: orioneta-conversation-service
     restart: unless-stopped
     environment:
+      <<: *spring-common-env
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_conversations
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
@@ -162,10 +174,11 @@ services:
   message-service:
     profiles:
       - messaging
-    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-message-service:${IMAGE_TAG:-develop}
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-message-service:${IMAGE_TAG:-latest}
     container_name: orioneta-message-service
     restart: unless-stopped
     environment:
+      <<: *spring-common-env
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_messages
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
@@ -182,10 +195,11 @@ services:
   notification-service:
     profiles:
       - messaging
-    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-notification-service:${IMAGE_TAG:-develop}
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-notification-service:${IMAGE_TAG:-latest}
     container_name: orioneta-notification-service
     restart: unless-stopped
     environment:
+      <<: *spring-common-env
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_notifications
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
@@ -202,10 +216,11 @@ services:
   customization-service:
     profiles:
       - customization
-    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-customization-service:${IMAGE_TAG:-develop}
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-customization-service:${IMAGE_TAG:-latest}
     container_name: orioneta-customization-service
     restart: unless-stopped
     environment:
+      <<: *spring-common-env
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_customization
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
@@ -222,10 +237,11 @@ services:
   media-service:
     profiles:
       - media
-    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-media-service:${IMAGE_TAG:-develop}
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-media-service:${IMAGE_TAG:-latest}
     container_name: orioneta-media-service
     restart: unless-stopped
     environment:
+      <<: *spring-common-env
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_media
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
@@ -236,10 +252,11 @@ services:
   neta-market-service:
     profiles:
       - market
-    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-neta-market-service:${IMAGE_TAG:-develop}
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-neta-market-service:${IMAGE_TAG:-latest}
     container_name: orioneta-neta-market-service
     restart: unless-stopped
     environment:
+      <<: *spring-common-env
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_neta_market
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
@@ -256,10 +273,11 @@ services:
   realtime-service:
     profiles:
       - realtime
-    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-realtime-service:${IMAGE_TAG:-develop}
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-realtime-service:${IMAGE_TAG:-latest}
     container_name: orioneta-realtime-service
     restart: unless-stopped
     environment:
+      <<: *spring-common-env
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-orioneta}
@@ -275,10 +293,11 @@ services:
   moderation-service:
     profiles:
       - market
-    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-moderation-service:${IMAGE_TAG:-develop}
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-moderation-service:${IMAGE_TAG:-latest}
     container_name: orioneta-moderation-service
     restart: unless-stopped
     environment:
+      <<: *spring-common-env
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_moderation
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
@@ -295,10 +314,11 @@ services:
   audit-service:
     profiles:
       - audit
-    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-audit-service:${IMAGE_TAG:-develop}
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-audit-service:${IMAGE_TAG:-latest}
     container_name: orioneta-audit-service
     restart: unless-stopped
     environment:
+      <<: *spring-common-env
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_audit
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
