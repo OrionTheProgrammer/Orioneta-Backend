@@ -4,24 +4,29 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDateTime;
+import net.datafaker.Faker;
 import org.junit.jupiter.api.Test;
 
 class UserTest {
 
+    private final Faker faker = new Faker();
+
     @Test
     void createsUserWithDefaultsAndNormalizedEmail() {
+        String email = faker.internet().emailAddress();
+
         User user = new User(
-                "orion",
-                "Orion",
-                "Creador de Orioneta",
-                "ORION@ORIONETA.CL",
+                safeUsername(),
+                safeDisplayName(),
+                faker.lorem().sentence(8),
+                email.toUpperCase(),
                 null,
                 null,
                 null
         );
 
         assertThat(user.getUserID()).isNotNull();
-        assertThat(user.getEmail()).isEqualTo("orion@orioneta.cl");
+        assertThat(user.getEmail()).isEqualTo(email.toLowerCase());
         assertThat(user.getFriendCode()).hasSize(12);
         assertThat(user.getStatus()).isEqualTo(Status.OFFLINE);
         assertThat(user.getVisibility()).isEqualTo(VisibilityStatus.PUBLIC);
@@ -31,7 +36,7 @@ class UserTest {
 
     @Test
     void rejectsInvalidEmail() {
-        assertThatThrownBy(() -> new User("orion", "Orion", "", "email-malo", null, null, null))
+        assertThatThrownBy(() -> new User(safeUsername(), safeDisplayName(), "", "email-malo", null, null, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("email");
     }
@@ -59,5 +64,14 @@ class UserTest {
         assertThat(user.getUpdatedAt()).isEqualTo(updatedAt);
         assertThat(user.getStatus()).isEqualTo(Status.ONLINE);
         assertThat(user.getVisibility()).isEqualTo(VisibilityStatus.PRIVATE);
+    }
+
+    private String safeUsername() {
+        return ("user" + faker.number().digits(8)).substring(0, 12);
+    }
+
+    private String safeDisplayName() {
+        String displayName = faker.name().firstName() + " " + faker.name().lastName();
+        return displayName.length() > 60 ? displayName.substring(0, 60) : displayName;
     }
 }

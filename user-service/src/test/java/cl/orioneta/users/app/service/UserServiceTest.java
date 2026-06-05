@@ -2,6 +2,10 @@ package cl.orioneta.users.app.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import cl.orioneta.users.app.dto.CreateUserRequest;
 import cl.orioneta.users.app.dto.UpdateUserProfileRequest;
@@ -11,137 +15,108 @@ import cl.orioneta.users.app.repository.UserRepository;
 import cl.orioneta.users.domain.exception.UserAlreadyExistsException;
 import cl.orioneta.users.domain.model.Status;
 import cl.orioneta.users.domain.model.User;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
-import java.util.UUID;
+import net.datafaker.Faker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class UserServiceTest {
 
-    private InMemoryUserRepository userRepository;
+    private final Faker faker = new Faker();
+
+    private UserRepository userRepository;
     private UserService userService;
 
     @BeforeEach
     void setUp() {
-        userRepository = new InMemoryUserRepository();
+        userRepository = Mockito.mock(UserRepository.class);
         userService = new UserService(userRepository, new UserMapper());
     }
 
     @Test
     void createsUser() {
-        UserResponse response = userService.createUser(new CreateUserRequest(
-                "orion",
-                "Orion",
-                "Creador de Orioneta",
-                "orion@orioneta.cl",
-                null
-        ));
+        CreateUserRequest request = fakeCreateUserRequest();
+
+        when(userRepository.existsByUserName(request.userName())).thenReturn(false);
+        when(userRepository.existsByEmail(request.email())).thenReturn(false);
+        when(userRepository.existsByFriendCode(any())).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserResponse response = userService.createUser(request);
 
         assertThat(response.userID()).isNotNull();
-        assertThat(response.userName()).isEqualTo("orion");
+        assertThat(response.userName()).isEqualTo(request.userName());
+        assertThat(response.email()).isEqualTo(request.email().toLowerCase());
         assertThat(response.status()).isEqualTo(Status.OFFLINE);
-        assertThat(userRepository.findAll()).hasSize(1);
+        verify(userRepository).save(any(User.class));
     }
 
     @Test
     void rejectsDuplicatedEmailIgnoringCase() {
-        userService.createUser(new CreateUserRequest("orion", "Orion", "", "orion@orioneta.cl", null));
+        CreateUserRequest request = fakeCreateUserRequest();
 
-        assertThatThrownBy(() -> userService.createUser(new CreateUserRequest(
-                "orion2",
-                "Orion Dos",
-                "",
-                "ORION@ORIONETA.CL",
-                null
-        )))
+        when(userRepository.existsByUserName(request.userName())).thenReturn(false);
+        when(userRepository.existsByEmail(request.email())).thenReturn(true);
+
+        assertThatThrownBy(() -> userService.createUser(request))
                 .isInstanceOf(UserAlreadyExistsException.class)
                 .hasMessageContaining("email");
+
+        verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
     void updatesProfileAndStatus() {
-        UserResponse created = userService.createUser(new CreateUserRequest("orion", "Orion", "", "orion@orioneta.cl", null));
+        User user = fakeUser();
+        String displayName = safeDisplayName();
+        String bio = faker.lorem().sentence(6);
+        String profilePhoto = "https://cdn.orioneta.cl/" + faker.file().fileName();
+
+        when(userRepository.findById(user.getUserID())).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         UserResponse updatedProfile = userService.updateProfile(
-                created.userID(),
-                new UpdateUserProfileRequest("Orioneta", "Nueva bio", "https://cdn.orioneta.cl/avatar.png")
+                user.getUserID(),
+                new UpdateUserProfileRequest(displayName, bio, profilePhoto)
         );
-        UserResponse updatedStatus = userService.updateStatus(created.userID(), new UpdateUserStatusRequest(Status.BUSY));
+        UserResponse updatedStatus = userService.updateStatus(user.getUserID(), new UpdateUserStatusRequest(Status.BUSY));
 
-        assertThat(updatedProfile.displayName()).isEqualTo("Orioneta");
-        assertThat(updatedProfile.bio()).isEqualTo("Nueva bio");
+        assertThat(updatedProfile.displayName()).isEqualTo(displayName);
+        assertThat(updatedProfile.bio()).isEqualTo(bio);
         assertThat(updatedStatus.status()).isEqualTo(Status.BUSY);
     }
 
-    private static class InMemoryUserRepository implements UserRepository {
+    private CreateUserRequest fakeCreateUserRequest() {
+        return new CreateUserRequest(
+                safeUsername(),
+                safeDisplayName(),
+                faker.lorem().sentence(8),
+                faker.internet().emailAddress().toLowerCase(),
+                null
+        );
+    }
 
-        private final List<User> users = new ArrayList<>();
+    private User fakeUser() {
+        CreateUserRequest request = fakeCreateUserRequest();
 
-        @Override
-        public User save(User user) {
-            deleteById(user.getUserID());
-            users.add(user);
-            return user;
-        }
+        return new User(
+                request.userName(),
+                request.displayName(),
+                request.bio(),
+                request.email(),
+                null,
+                null,
+                request.profilePhoto()
+        );
+    }
 
-        @Override
-        public List<User> findAll() {
-            return List.copyOf(users);
-        }
+    private String safeUsername() {
+        return ("user" + faker.number().digits(8)).substring(0, 12);
+    }
 
-        @Override
-        public Optional<User> findById(UUID userID) {
-            return users.stream()
-                    .filter(user -> user.getUserID().equals(userID))
-                    .findFirst();
-        }
-
-        @Override
-        public Optional<User> findByUserName(String userName) {
-            return users.stream()
-                    .filter(user -> user.getUserName().equalsIgnoreCase(userName))
-                    .findFirst();
-        }
-
-        @Override
-        public Optional<User> findByEmail(String email) {
-            return users.stream()
-                    .filter(user -> user.getEmail().equals(normalizeEmail(email)))
-                    .findFirst();
-        }
-
-        @Override
-        public Optional<User> findByFriendCode(String friendCode) {
-            return users.stream()
-                    .filter(user -> user.getFriendCode().equals(friendCode))
-                    .findFirst();
-        }
-
-        @Override
-        public boolean existsByUserName(String userName) {
-            return findByUserName(userName).isPresent();
-        }
-
-        @Override
-        public boolean existsByEmail(String email) {
-            return findByEmail(email).isPresent();
-        }
-
-        @Override
-        public boolean existsByFriendCode(String friendCode) {
-            return findByFriendCode(friendCode).isPresent();
-        }
-
-        @Override
-        public void deleteById(UUID userID) {
-            users.removeIf(user -> user.getUserID().equals(userID));
-        }
-
-        private String normalizeEmail(String email) {
-            return email.trim().toLowerCase(Locale.ROOT);
-        }
+    private String safeDisplayName() {
+        String displayName = faker.name().firstName() + " " + faker.name().lastName();
+        return displayName.length() > 60 ? displayName.substring(0, 60) : displayName;
     }
 }
