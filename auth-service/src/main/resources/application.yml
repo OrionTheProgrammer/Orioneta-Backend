@@ -1,0 +1,78 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: auth-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/orioneta_auth
+    username: orioneta
+    password: orioneta
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:dev-google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:dev-google-client-secret}
+            scope:
+              - openid
+              - profile
+              - email
+          github:
+            client-id: ${GITHUB_CLIENT_ID:dev-github-client-id}
+            client-secret: ${GITHUB_CLIENT_SECRET:dev-github-client-secret}
+            scope:
+              - read:user
+              - user:email
+
+orioneta:
+  auth:
+    jwt:
+      issuer: ${ORIONETA_JWT_ISSUER:orioneta-auth-service}
+      secret: ${ORIONETA_JWT_SECRET:orioneta-dev-jwt-secret-change-me-with-32-bytes-minimum}
+      access-token-ttl: ${ORIONETA_ACCESS_TOKEN_TTL:PT15M}
+      refresh-token-ttl: ${ORIONETA_REFRESH_TOKEN_TTL:P30D}
+    oauth2:
+      success-redirect-uri: ${ORIONETA_OAUTH2_SUCCESS_REDIRECT_URI:http://localhost:5173/auth/oauth2/callback}
+      failure-redirect-uri: ${ORIONETA_OAUTH2_FAILURE_REDIRECT_URI:http://localhost:5173/auth/oauth2/error}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,loggers
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  level:
+    root: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+    cl.orioneta: DEBUG
