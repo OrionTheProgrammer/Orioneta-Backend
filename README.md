@@ -63,7 +63,7 @@ El pipeline publica tags por rama (`develop`, `main`), por SHA corto (`sha-xxxxx
 
 ## Despliegue en EC2
 
-El workflow `.github/workflows/deploy-ec2.yml` despliega la pila Docker Compose en una instancia EC2 despues de que el pipeline de imagenes termine correctamente. Tambien puede ejecutarse manualmente desde GitHub Actions.
+El workflow `.github/workflows/dockerhub-images.yml` despliega la pila Docker Compose en una instancia EC2 despues de publicar correctamente las imagenes Docker.
 
 Secretos requeridos:
 
