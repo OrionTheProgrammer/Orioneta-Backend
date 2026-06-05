@@ -1,0 +1,45 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: bff-service
+
+orioneta:
+  services:
+    auth: ${ORIONETA_AUTH_URL:http://localhost:8082}
+    users: ${ORIONETA_USER_URL:http://localhost:8083}
+    friendships: ${ORIONETA_FRIENDSHIP_URL:http://localhost:8084}
+    conversations: ${ORIONETA_CONVERSATION_URL:http://localhost:8085}
+    messages: ${ORIONETA_MESSAGE_URL:http://localhost:8086}
+    notifications: ${ORIONETA_NOTIFICATION_URL:http://localhost:8087}
+    customizations: ${ORIONETA_CUSTOMIZATION_URL:http://localhost:8088}
+    neta-market: ${ORIONETA_NETA_MARKET_URL:http://localhost:8090}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,loggers
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  level:
+    root: INFO
+    org.springframework: WARN
+    cl.orioneta: DEBUG
