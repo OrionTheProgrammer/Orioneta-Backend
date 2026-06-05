@@ -88,6 +88,9 @@ URLs JDBC del perfil `dev-h2`:
 Comandos utiles para levantar servicios con datos de prueba:
 
 ```bash
+mvn -pl auth-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
+mvn -pl user-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
+mvn -pl friendship-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
 mvn -pl conversation-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
 mvn -pl message-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
 mvn -pl notification-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
@@ -108,14 +111,22 @@ grupo demo: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb
 template aprobado: 60000000-0000-0000-0000-000000000001
 ```
 
+Usuario demo de auth-service:
+
+```txt
+email: orion@orioneta.dev
+password: orioneta123
+```
+
 ## Estructura
 
-Los microservicios con negocio usan una arquitectura por capas:
+Los microservicios con negocio usan una arquitectura por capas. En los servicios mas completos (`auth-service`, `user-service` y `friendship-service`) la capa de aplicacion se llama `app` para mantener el codigo mas directo mientras el proyecto madura:
 
 - `domain`: modelos, puertos, servicios de dominio, eventos y excepciones.
-- `application`: casos de uso, DTOs, comandos, consultas y mappers.
-- `infrastructure`: controladores, persistencia, mensajeria, clientes y configuracion.
-- `shared`: constantes y utilidades locales del servicio.
+- `app`: DTOs, puertos, servicios de aplicacion y mappers.
+- `infrastructure`: controladores, persistencia, mensajeria, clientes externos y configuracion.
+
+Algunos servicios MVP aun usan carpetas `application` porque partieron con casos de uso separados. La regla para futuros cambios es no duplicar estilos dentro del mismo servicio: cada modulo debe tener una sola capa de aplicacion clara.
 
 Los modulos `shared/shared-kernel`, `shared/shared-events` y `shared/shared-security` son librerias reutilizables, no aplicaciones ejecutables.
 
