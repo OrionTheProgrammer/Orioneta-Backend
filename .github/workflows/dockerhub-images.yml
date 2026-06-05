@@ -217,8 +217,37 @@ jobs:
 
           cd ~/orioneta-backend
 
+          export COMPOSE_PARALLEL_LIMIT=1
+          export DOCKER_CLIENT_TIMEOUT=300
+          export COMPOSE_HTTP_TIMEOUT=300
+
+          retry_compose_pull() {
+            service="$1"
+
+            for attempt in 1 2 3; do
+              echo "Pulling ${service} (intento ${attempt}/3)"
+
+              if "${docker_cmd[@]}" compose -f docker-compose.prod.yml pull "$service"; then
+                return 0
+              fi
+
+              if [ "$attempt" -eq 3 ]; then
+                echo "No se pudo descargar ${service} despues de 3 intentos."
+                return 1
+              fi
+
+              sleep $((attempt * 20))
+            done
+          }
+
           printf '%s' "$DOCKERHUB_TOKEN" | "${docker_cmd[@]}" login -u "$DOCKERHUB_USERNAME" --password-stdin
-          "${docker_cmd[@]}" compose -f docker-compose.prod.yml pull
+
+          services="$("${docker_cmd[@]}" compose -f docker-compose.prod.yml config --services)"
+
+          for service in $services; do
+            retry_compose_pull "$service"
+          done
+
           "${docker_cmd[@]}" compose -f docker-compose.prod.yml up -d --remove-orphans
           "${docker_cmd[@]}" image prune -f
           "${docker_cmd[@]}" compose -f docker-compose.prod.yml ps
