@@ -40,6 +40,27 @@ Para levantar un servicio individual:
 mvn -pl auth-service spring-boot:run
 ```
 
+## Imagenes Docker
+
+El pipeline `.github/workflows/dockerhub-images.yml` compila el reactor Maven, ejecuta las pruebas y publica una imagen por microservicio en DockerHub.
+
+Secretos requeridos en GitHub Actions:
+
+```txt
+DOCKERHUB_USERNAME
+DOCKERHUB_TOKEN
+```
+
+Convencion de nombres:
+
+```txt
+<DOCKERHUB_USERNAME>/orioneta-auth-service
+<DOCKERHUB_USERNAME>/orioneta-user-service
+<DOCKERHUB_USERNAME>/orioneta-friendship-service
+```
+
+El pipeline publica tags por rama (`develop`, `main`), por SHA corto (`sha-xxxxxxxxxxxx`) y `latest` cuando el commit entra a `main`.
+
 ## Pruebas locales con H2 y Swagger
 
 Para probar un microservicio sin PostgreSQL usa el perfil `dev-h2`. Este perfil crea una base H2 en memoria, carga datos de prueba cuando el modulo ya tiene entidades JPA implementadas y habilita la consola H2.
