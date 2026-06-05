@@ -1,375 +1,277 @@
 package cl.orioneta.users.domain.model;
 
-import cl.orioneta.users.domain.exception.InvalidUserDataException;
 import java.time.LocalDateTime;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
- * Representa la identidad publica de un usuario de Orioneta.
+ * Representa el perfil publico de un usuario dentro de Orioneta.
  *
- * <p>Esta clase es modelo de dominio, no entidad JPA. Mantiene las reglas que
- * deben cumplirse sin importar si los datos llegan desde HTTP, persistencia o un
- * consumidor de eventos futuro. La infraestructura debe mapear hacia y desde
- * este modelo para que las validaciones de negocio no queden repartidas en
- * controladores o entidades tecnicas.
+ * <p>Esta clase vive en {@code domain} porque contiene reglas propias del
+ * negocio: formato de email, largo de textos, generacion de friend code y
+ * cambios permitidos del perfil. No depende de Spring, JPA ni HTTP.</p>
  */
 public class User {
+    private static final Pattern UUID_PATTERN = Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
 
-    private static final int MAX_BIO_LENGTH = 160;
-    private static final int FRIEND_CODE_LENGTH = 8;
+    private static final int BIO_MAX_LENGTH = 260;
+    private static final int MAX_LENGTH = 60;
+    private static final int MIN_LENGTH = 3;
+    private static final int HEX_CODE_LENGTH = 12;
+    private static final int EMAIL_MAX_LENGTH = 120;
+    private static final int URL_MAX_LENGTH = 500;
 
-    private final UUID id;
-    private final String username;
-    private final String email;
-    private final String friendCode;
-    private final LocalDateTime createdAt;
 
+    private UUID userID;
+    private String userName;
     private String displayName;
-    private String avatarUrl;
-    private String bannerUrl;
     private String bio;
-    private UserStatus status;
-    private AccountVisibility accountVisibility;
+    private String email;
+    private String friendCode;
+    private Status status;
+    private VisibilityStatus visibility;
+    private String profilePhoto;
+    private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    private User(
-            UUID id,
-            String username,
-            String displayName,
-            String email,
-            String friendCode,
-            String avatarUrl,
-            String bannerUrl,
-            String bio,
-            UserStatus status,
-            AccountVisibility accountVisibility,
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt
-    ) {
-        this.id = Objects.requireNonNull(id, "El id del usuario es obligatorio.");
-        this.username = requireText(username, "El username es obligatorio.");
-        this.displayName = requireText(displayName, "El nombre visible es obligatorio.");
-        this.email = requireText(email, "El email es obligatorio.");
-        this.friendCode = validateFriendCode(friendCode);
-        this.avatarUrl = normalizeOptionalText(avatarUrl);
-        this.bannerUrl = normalizeOptionalText(bannerUrl);
-        this.bio = validateBio(bio);
-        this.status = defaultStatus(status);
-        this.accountVisibility = defaultVisibility(accountVisibility);
-        this.createdAt = Objects.requireNonNull(createdAt, "La fecha de creacion es obligatoria.");
-        this.updatedAt = Objects.requireNonNull(updatedAt, "La fecha de actualizacion es obligatoria.");
-    }
 
     /**
-     * Crea un usuario nuevo con los valores iniciales definidos por el negocio.
+     * Crea un usuario nuevo desde datos ingresados por la aplicacion.
      *
-     * <p>El caso de uso entrega el {@code friendCode} despues de verificar que
-     * sea unico. El dominio aplica defaults seguros: usuario desconectado,
-     * visibilidad publica y fechas iguales para creacion y actualizacion.
-     *
-     * @param username username unico elegido por la persona
-     * @param displayName nombre visible dentro de Orioneta
-     * @param email correo asociado al perfil publico
-     * @param friendCode codigo hexadecimal publico para agregar amigos
-     * @param bio biografia publica opcional
-     * @return usuario nuevo listo para persistir
+     * <p>El id, friend code y fechas se generan dentro del dominio para que la
+     * entidad nazca siempre en un estado valido.</p>
      */
-    public static User create(
-            String username,
-            String displayName,
-            String email,
-            String friendCode,
-            String bio
-    ) {
+    public User(String userName, String displayName, String bio, String email, String status, String visibility, String profilePhoto){
         LocalDateTime now = LocalDateTime.now();
-        return new User(
-                UUID.randomUUID(),
-                username,
-                displayName,
-                email,
-                friendCode,
-                null,
-                null,
-                bio,
-                UserStatus.OFFLINE,
-                AccountVisibility.PUBLIC,
-                now,
-                now
-        );
+
+        this.userID = UUID.randomUUID();
+        this.userName = stringValidator(userName, MIN_LENGTH, MAX_LENGTH);
+        this.displayName = stringValidator(displayName, MIN_LENGTH, MAX_LENGTH);
+        this.bio = (bio == null || bio.isBlank()) ? "" : stringValidator(bio, 0, BIO_MAX_LENGTH);
+        this.email = emailValidator(email);
+        this.friendCode = FriendCode.friendCodeGen(HEX_CODE_LENGTH);
+        this.status = statusValidator(status);
+        this.visibility = visibilityValidator(visibility);
+        this.profilePhoto = optionalStringValidator(profilePhoto, URL_MAX_LENGTH);
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    private User(String userID, String userName, String displayName, String bio, String email, String friendCode, String status, String visibility, String profilePhoto, LocalDateTime createdAt, LocalDateTime updatedAt){
+        this.userID = idValidator(userID);
+        this.userName = stringValidator(userName, MIN_LENGTH, MAX_LENGTH);
+        this.displayName = stringValidator(displayName, MIN_LENGTH, MAX_LENGTH);
+        this.bio = (bio == null || bio.isBlank()) ? "" : stringValidator(bio, 0, BIO_MAX_LENGTH);
+        this.email = emailValidator(email);
+        this.friendCode = FriendCode.codeValidator(friendCode, HEX_CODE_LENGTH);
+        this.status = statusValidator(status);
+        this.visibility = visibilityValidator(visibility);
+        this.profilePhoto = optionalStringValidator(profilePhoto, URL_MAX_LENGTH);
+        this.createdAt = (createdAt == null) ? LocalDateTime.now() : createdAt;
+        this.updatedAt = (updatedAt == null) ? this.createdAt : updatedAt;
     }
 
     /**
-     * Reconstruye un usuario que ya existe en persistencia.
+     * Reconstruye un usuario que viene desde la base de datos.
      *
-     * <p>Este metodo evita regenerar id, friend code o fechas al leer desde la
-     * base de datos. Cualquier adaptador de persistencia debe usarlo cuando
-     * transforma una entidad JPA al modelo de dominio.
-     *
-     * @param id id historico del usuario
-     * @param username username unico del usuario
-     * @param displayName nombre visible guardado
-     * @param email correo asociado al perfil
-     * @param friendCode codigo publico de amistad
-     * @param avatarUrl URL de avatar guardada
-     * @param bannerUrl URL de banner guardada
-     * @param bio biografia guardada
-     * @param status estado de presencia guardado
-     * @param accountVisibility visibilidad guardada
-     * @param createdAt fecha original de creacion
-     * @param updatedAt fecha de ultima actualizacion
-     * @return usuario reconstruido desde persistencia
+     * <p>Se usa un nombre intencionalmente distinto a "constructor normal" para
+     * recordar que no estamos creando un usuario nuevo, sino rehidratando uno
+     * existente desde persistencia.</p>
      */
-    public static User rehydrate(
-            UUID id,
-            String username,
-            String displayName,
-            String email,
-            String friendCode,
-            String avatarUrl,
-            String bannerUrl,
-            String bio,
-            UserStatus status,
-            AccountVisibility accountVisibility,
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt
-    ) {
-        return new User(
-                id,
-                username,
-                displayName,
-                email,
-                friendCode,
-                avatarUrl,
-                bannerUrl,
-                bio,
-                status,
-                accountVisibility,
-                createdAt,
-                updatedAt
-        );
+    public static User rehidratado(String userID, String userName, String displayName, String bio, String email, String friendCode, String status, String visibility, String profilePhoto){
+        return rehidratado(userID, userName, displayName, bio, email, friendCode, status, visibility, profilePhoto, null, null);
     }
 
     /**
-     * Actualiza solo los campos publicos editables del perfil.
-     *
-     * <p>El username, email y friend code quedan fuera porque identifican al
-     * usuario en otros flujos. Si el producto permite cambiarlos mas adelante,
-     * conviene crear casos de uso dedicados con auditoria y validaciones propias.
-     *
-     * @param displayName nuevo nombre visible; si viene null no se modifica
-     * @param bio nueva biografia; si viene null no se modifica
-     * @param avatarUrl nueva URL de avatar; si viene null no se modifica
-     * @param bannerUrl nueva URL de banner; si viene null no se modifica
+     * Reconstruye un usuario existente conservando sus fechas originales.
      */
-    public void updateProfile(String displayName, String bio, String avatarUrl, String bannerUrl) {
+    public static User rehidratado(String userID, String userName, String displayName, String bio, String email, String friendCode, String status, String visibility, String profilePhoto, LocalDateTime createdAt, LocalDateTime updatedAt){
+        return new User(userID, userName, displayName, bio, email, friendCode, status, visibility, profilePhoto, createdAt, updatedAt);
+    }
+
+    /**
+     * Actualiza solo los datos editables del perfil.
+     *
+     * <p>Un valor {@code null} significa "no modificar". Un string vacio en
+     * {@code bio} o {@code profilePhoto} sirve para limpiar ese campo.</p>
+     */
+    public void updateProfile(String displayName, String bio, String profilePhoto) {
         if (displayName != null) {
-            this.displayName = requireText(displayName, "El nombre visible no puede quedar vacio.");
+            this.displayName = stringValidator(displayName, MIN_LENGTH, MAX_LENGTH);
         }
+
         if (bio != null) {
-            this.bio = validateBio(bio);
+            this.bio = bio.isBlank() ? "" : stringValidator(bio, 0, BIO_MAX_LENGTH);
         }
-        if (avatarUrl != null) {
-            this.avatarUrl = normalizeOptionalText(avatarUrl);
+
+        if (profilePhoto != null) {
+            this.profilePhoto = optionalStringValidator(profilePhoto, URL_MAX_LENGTH);
         }
-        if (bannerUrl != null) {
-            this.bannerUrl = normalizeOptionalText(bannerUrl);
-        }
+
         touch();
     }
 
     /**
      * Cambia el estado de presencia del usuario.
-     *
-     * <p>Publicar eventos de presencia corresponde a una capa de aplicacion o al
-     * {@code realtime-service}; el dominio solo mantiene la regla local.
-     *
-     * @param status nuevo estado de presencia
      */
-    public void changeStatus(UserStatus status) {
-        this.status = Objects.requireNonNull(status, "El estado del usuario es obligatorio.");
+    public void changeStatus(Status status) {
+        this.status = (status == null) ? Status.OFFLINE : status;
         touch();
     }
 
     /**
-     * Cambia la visibilidad social del perfil.
-     *
-     * @param accountVisibility nueva regla de visibilidad
+     * Cambia la visibilidad publica de la cuenta.
      */
-    public void changeVisibility(AccountVisibility accountVisibility) {
-        this.accountVisibility = Objects.requireNonNull(
-                accountVisibility,
-                "La visibilidad de la cuenta es obligatoria."
-        );
+    public void changeVisibility(VisibilityStatus visibility) {
+        this.visibility = (visibility == null) ? VisibilityStatus.PUBLIC : visibility;
         touch();
     }
 
-    /**
-     * Entrega el id interno usado por persistencia y eventos.
-     *
-     * @return id del usuario
-     */
-    public UUID getId() {
-        return id;
+    public UUID getUserID() {
+        return userID;
     }
 
-    /**
-     * Entrega el username unico elegido por la persona.
-     *
-     * @return username unico
-     */
-    public String getUsername() {
-        return username;
+    public String getUserName() {
+        return userName;
     }
 
-    /**
-     * Entrega el nombre visible del usuario.
-     *
-     * @return nombre visible
-     */
     public String getDisplayName() {
         return displayName;
     }
 
-    /**
-     * Entrega el correo vinculado al perfil publico.
-     *
-     * @return correo del usuario
-     */
-    public String getEmail() {
-        return email;
-    }
-
-    /**
-     * Entrega el codigo publico para agregar amigos.
-     *
-     * @return codigo hexadecimal de amistad
-     */
-    public String getFriendCode() {
-        return friendCode;
-    }
-
-    /**
-     * Entrega la URL del avatar.
-     *
-     * @return URL de avatar o null si no existe
-     */
-    public String getAvatarUrl() {
-        return avatarUrl;
-    }
-
-    /**
-     * Entrega la URL del banner.
-     *
-     * @return URL de banner o null si no existe
-     */
-    public String getBannerUrl() {
-        return bannerUrl;
-    }
-
-    /**
-     * Entrega la biografia publica.
-     *
-     * @return biografia, vacia si no se configuro una
-     */
     public String getBio() {
         return bio;
     }
 
-    /**
-     * Entrega el estado de presencia actual.
-     *
-     * @return estado del usuario
-     */
-    public UserStatus getStatus() {
+    public String getEmail() {
+        return email;
+    }
+
+    public String getFriendCode() {
+        return friendCode;
+    }
+
+    public Status getStatus() {
         return status;
     }
 
-    /**
-     * Entrega la visibilidad social de la cuenta.
-     *
-     * @return visibilidad de la cuenta
-     */
-    public AccountVisibility getAccountVisibility() {
-        return accountVisibility;
+    public VisibilityStatus getVisibility() {
+        return visibility;
     }
 
-    /**
-     * Entrega la fecha de creacion del perfil.
-     *
-     * @return fecha de creacion
-     */
+    public String getProfilePhoto() {
+        return profilePhoto;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
-    /**
-     * Entrega la fecha de ultima actualizacion.
-     *
-     * @return fecha de ultima actualizacion
-     */
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
 
-    @Override
-    public String toString() {
-        return "User{"
-                + "id=" + id
-                + ", username='" + username + '\''
-                + ", displayName='" + displayName + '\''
-                + ", email='" + email + '\''
-                + ", friendCode='" + friendCode + '\''
-                + ", status=" + status
-                + ", accountVisibility=" + accountVisibility
-                + ", createdAt=" + createdAt
-                + ", updatedAt=" + updatedAt
-                + '}';
-    }
 
-    private void touch() {
-        updatedAt = LocalDateTime.now();
-    }
-
-    private static UserStatus defaultStatus(UserStatus status) {
-        return status == null ? UserStatus.OFFLINE : status;
-    }
-
-    private static AccountVisibility defaultVisibility(AccountVisibility visibility) {
-        return visibility == null ? AccountVisibility.PUBLIC : visibility;
-    }
-
-    private static String requireText(String value, String errorMessage) {
-        if (value == null || value.isBlank()) {
-            throw new InvalidUserDataException(errorMessage);
+    private UUID idValidator(String code){
+        if (code == null || code.isBlank()){
+            throw new IllegalArgumentException("El UUID no puede ser null o estar vacio");
+        }else if (!UUID_PATTERN.matcher(code).matches()){
+            throw new IllegalArgumentException("UUID no valido");
         }
-        return value.trim();
+
+        return UUID.fromString(code);
+
     }
 
-    private static String normalizeOptionalText(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
+    private String stringValidator(String name, int min, int max){
+        if (name == null || name.trim().isBlank()){
+            throw new IllegalArgumentException("El nombre no puede ser null o estar vacio");
         }
-        return value.trim();
+
+        String normalizedName = name.trim();
+
+        if (normalizedName.length() < min || normalizedName.length() > max){
+            throw new IllegalArgumentException("No puede tener una logitud menor a "+min+" ni mayor a "+max);
+        }
+
+        return normalizedName;
     }
 
-    private static String validateBio(String value) {
+    private String stringValidator(String name){
+        if (name == null || name.trim().isBlank()){
+            throw new IllegalArgumentException("El nombre no puede ser null o estar vacio");
+        }
+
+        return name.trim();
+    }
+
+    private String emailValidator(String email){
+        String regex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
+
+        if (email == null || email.isBlank()){
+            throw new IllegalArgumentException("El email no puede ser null ni estar vacio");
+        }else if (!email.matches(regex)){
+            throw new IllegalArgumentException("El formato del email no es valido");
+        }
+
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+
+        if (normalizedEmail.length() > EMAIL_MAX_LENGTH) {
+            throw new IllegalArgumentException("El email no puede superar los " + EMAIL_MAX_LENGTH + " caracteres");
+        }
+
+        return normalizedEmail;
+    }
+
+    private String optionalStringValidator(String value, int max) {
         if (value == null || value.isBlank()) {
             return "";
         }
-        String normalized = value.trim();
-        if (normalized.length() > MAX_BIO_LENGTH) {
-            throw new InvalidUserDataException("La biografia no puede superar 160 caracteres.");
+
+        String normalizedValue = value.trim();
+
+        if (normalizedValue.length() > max) {
+            throw new IllegalArgumentException("El texto no puede superar los " + max + " caracteres");
         }
-        return normalized;
+
+        return normalizedValue;
     }
 
-    private static String validateFriendCode(String value) {
-        String normalized = requireText(value, "El friend code es obligatorio.").toUpperCase(Locale.ROOT);
-        if (!normalized.matches("[0-9A-F]{" + FRIEND_CODE_LENGTH + "}")) {
-            throw new InvalidUserDataException("El friend code debe ser hexadecimal y tener 8 caracteres.");
+    private Status statusValidator(String status){
+        if (status == null || status.isBlank()){
+            return Status.OFFLINE;
         }
-        return normalized;
+
+        String statusR = status.trim();
+
+        for(Status type: Status.values()){
+            if (type.name().equalsIgnoreCase(statusR)){
+                return type;
+            }
+        }
+
+        return Status.OFFLINE;
     }
+
+    private VisibilityStatus visibilityValidator(String visibility){
+        if (visibility == null || visibility.isBlank()){
+            return VisibilityStatus.PUBLIC;
+        }
+
+        String visibilityR = visibility.trim();
+
+        for(VisibilityStatus type: VisibilityStatus.values()){
+            if (type.name().equalsIgnoreCase(visibilityR)){
+                return type;
+            }
+        }
+
+        return VisibilityStatus.PUBLIC;
+    }
+
+    private void touch() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
 }

@@ -9,22 +9,14 @@ import org.springframework.security.web.SecurityFilterChain;
 /**
  * Configuracion de seguridad del user-service.
  *
- * <p>Durante el MVP deja abiertos los endpoints para facilitar pruebas con
- * Swagger y Postman. Cuando {@code auth-service} emita JWT reales, se debe
- * cambiar {@code permitAll()} por {@code authenticated()} y activar Resource
- * Server con JWT.
+ * <p>Durante el MVP los endpoints quedan abiertos para probar rapido con
+ * Swagger/Postman. Cuando auth-service emita JWT reales, se puede cambiar
+ * {@code permitAll()} por {@code authenticated()} y activar Resource Server.</p>
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    /**
-     * Construye la cadena de filtros HTTP usada por Spring Security.
-     *
-     * @param http builder de seguridad HTTP
-     * @return cadena de filtros configurada
-     * @throws Exception si Spring Security no puede construir la cadena
-     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http

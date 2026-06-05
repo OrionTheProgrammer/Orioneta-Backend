@@ -6,22 +6,17 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Configuracion OpenAPI para documentar endpoints del user-service.
+ * Metadatos de Swagger/OpenAPI para el user-service.
  */
 @Configuration
 public class OpenApiConfig {
 
-    /**
-     * Define la metadata visible en Swagger UI.
-     *
-     * @return configuracion OpenAPI del servicio
-     */
     @Bean
     public OpenAPI userServiceOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
                         .title("Orioneta User Service API")
-                        .description("API para gestion de usuarios, perfiles y friend codes de Orioneta")
+                        .description("API para perfiles publicos, friend codes y presencia de usuarios.")
                         .version("1.0.0"));
     }
 }
