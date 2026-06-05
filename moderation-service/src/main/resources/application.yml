@@ -1,0 +1,52 @@
+server:
+  port: 8092
+
+spring:
+  application:
+    name: moderation-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/orioneta_moderation
+    username: orioneta
+    password: orioneta
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    show-sql: false
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: orioneta
+    password: orioneta
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,loggers
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  level:
+    root: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+    cl.orioneta: DEBUG

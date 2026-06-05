@@ -1,0 +1,4 @@
+INSERT INTO neta_templates (id, author_user_id, name, description, type, status, preview_image_url, file_url, version, downloads, rating_average, created_at, updated_at)
+VALUES
+    ('60000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Neta Night', 'Tema oscuro de prueba para Swagger.', 'GLOBAL_THEME', 'APPROVED', 'https://local.orioneta.dev/media/neta-night-preview.png', 'https://local.orioneta.dev/templates/neta-night.zip', '1.0.0', 12, 4.8, TIMESTAMP '2026-06-05 09:00:00', TIMESTAMP '2026-06-05 09:00:00'),
+    ('60000000-0000-0000-0000-000000000002', '22222222-2222-2222-2222-222222222222', 'Burbujas Limpias', 'Estilo minimal para conversaciones.', 'BUBBLE_STYLE', 'PENDING_REVIEW', 'https://local.orioneta.dev/media/bubbles-preview.png', 'https://local.orioneta.dev/templates/burbujas-limpias.zip', '0.1.0', 0, 0, TIMESTAMP '2026-06-05 09:10:00', TIMESTAMP '2026-06-05 09:10:00');
