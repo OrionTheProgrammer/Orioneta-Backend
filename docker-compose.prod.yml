@@ -165,11 +165,14 @@ services:
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-orioneta}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-orioneta}
+      ORIONETA_CONVERSATION_URL: http://conversation-service:8085
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      conversation-service:
+        condition: service_started
 
   message-service:
     profiles:

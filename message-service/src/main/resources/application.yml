@@ -53,3 +53,7 @@ logging:
     org.springframework: WARN
     org.hibernate: WARN
     cl.orioneta: DEBUG
+
+orioneta:
+  services:
+    conversations: ${ORIONETA_CONVERSATION_URL:http://localhost:8085}
