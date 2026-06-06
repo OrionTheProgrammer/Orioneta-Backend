@@ -1,6 +1,8 @@
 package cl.orioneta.friendships.infrastructure.config;
 
 import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -17,5 +19,10 @@ public class RabbitMQConfig {
     @Bean
     public TopicExchange friendshipExchange() {
         return new TopicExchange(FRIENDSHIP_EXCHANGE);
+    }
+
+    @Bean
+    public MessageConverter friendshipJsonMessageConverter() {
+        return new Jackson2JsonMessageConverter();
     }
 }
