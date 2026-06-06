@@ -33,6 +33,9 @@ public class MediaEntity {
     @Column(nullable = false, length = 1000)
     private String url;
 
+    @Column(name = "storage_key", length = 1000)
+    private String storageKey;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     private MediaPurpose purpose;
@@ -46,13 +49,14 @@ public class MediaEntity {
     protected MediaEntity() {
     }
 
-    public MediaEntity(UUID id, UUID ownerUserId, String fileName, String contentType, long size, String url, MediaPurpose purpose, LocalDateTime createdAt, LocalDateTime deletedAt) {
+    public MediaEntity(UUID id, UUID ownerUserId, String fileName, String contentType, long size, String url, String storageKey, MediaPurpose purpose, LocalDateTime createdAt, LocalDateTime deletedAt) {
         this.id = id;
         this.ownerUserId = ownerUserId;
         this.fileName = fileName;
         this.contentType = contentType;
         this.size = size;
         this.url = url;
+        this.storageKey = storageKey;
         this.purpose = purpose;
         this.createdAt = createdAt;
         this.deletedAt = deletedAt;
@@ -80,6 +84,10 @@ public class MediaEntity {
 
     public String getUrl() {
         return url;
+    }
+
+    public String getStorageKey() {
+        return storageKey;
     }
 
     public MediaPurpose getPurpose() {

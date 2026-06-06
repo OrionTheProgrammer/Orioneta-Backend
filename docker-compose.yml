@@ -43,6 +43,24 @@ services:
       timeout: 5s
       retries: 5
 
+  minio:
+    image: minio/minio:latest
+    container_name: orioneta-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: orioneta
+      MINIO_ROOT_PASSWORD: orioneta123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   prometheus:
     image: prom/prometheus:v2.55.1
     container_name: orioneta-prometheus
@@ -77,6 +95,7 @@ services:
 
 volumes:
   postgres_data:
+  minio_data:
   grafana_data:
   sonarqube_data:
   sonarqube_extensions:

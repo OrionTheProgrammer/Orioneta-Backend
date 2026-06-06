@@ -15,6 +15,7 @@ public class MediaMapper {
                 mediaFile.getContentType(),
                 mediaFile.getSize(),
                 mediaFile.getUrl(),
+                mediaFile.getStorageKey(),
                 mediaFile.getPurpose(),
                 mediaFile.getCreatedAt(),
                 mediaFile.getDeletedAt()

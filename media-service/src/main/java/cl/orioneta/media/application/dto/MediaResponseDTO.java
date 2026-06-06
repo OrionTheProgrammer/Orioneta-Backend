@@ -15,6 +15,7 @@ public record MediaResponseDTO(
         String contentType,
         long size,
         String url,
+        String storageKey,
         MediaPurpose purpose,
         LocalDateTime createdAt,
         LocalDateTime deletedAt

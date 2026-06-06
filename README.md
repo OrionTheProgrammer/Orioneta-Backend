@@ -1,6 +1,6 @@
 # Orioneta Backend
 
-Backend de Orioneta basado en microservicios con Spring Boot, Spring Cloud Gateway, BFF, JPA, RabbitMQ, Redis y modulos compartidos.
+Backend de Orioneta basado en microservicios con Spring Boot, Spring Cloud Gateway, BFF, JPA, RabbitMQ, Redis, MinIO y modulos compartidos.
 
 ## Modulos
 
@@ -32,6 +32,16 @@ Backend de Orioneta basado en microservicios con Spring Boot, Spring Cloud Gatew
 ```bash
 docker compose up -d
 mvn clean install
+```
+
+MinIO queda disponible localmente en:
+
+```txt
+API S3 compatible: http://localhost:9000
+Consola web:       http://localhost:9001
+usuario:           orioneta
+password:          orioneta123
+bucket por defecto: orioneta-media
 ```
 
 Para levantar un servicio individual:
@@ -126,7 +136,7 @@ Perfiles disponibles:
 messaging      conversation-service, message-service, notification-service
 realtime       realtime-service
 customization  customization-service
-media          media-service
+media          media-service, minio
 market         neta-market-service, moderation-service
 audit          audit-service
 observability  prometheus, grafana
@@ -138,7 +148,38 @@ El gateway queda publicado en:
 http://<EC2_HOST>:8080
 ```
 
-Prometheus, Grafana y RabbitMQ Management quedan vinculados a `127.0.0.1` en la EC2 para evitar exponerlos publicamente. Para revisarlos se recomienda usar tunel SSH.
+Prometheus, Grafana, RabbitMQ Management y MinIO quedan vinculados a `127.0.0.1` en la EC2 para evitar exponerlos publicamente. Para revisarlos se recomienda usar tunel SSH.
+
+Cuando actives el perfil `media`, tambien se levanta MinIO:
+
+```txt
+MinIO API:     127.0.0.1:9000
+MinIO consola: 127.0.0.1:9001
+```
+
+Variables utiles para `~/orioneta-backend/.env`:
+
+```txt
+MINIO_ROOT_USER=orioneta
+MINIO_ROOT_PASSWORD=orioneta123
+MINIO_BUCKET=orioneta-media
+ORIONETA_MEDIA_PUBLIC_CONTENT_BASE_URL=/api/media
+```
+
+El endpoint de subida del `media-service` es multipart:
+
+```txt
+POST /api/media/upload
+ownerUserId=<uuid>
+purpose=AVATAR | BANNER | MESSAGE_ATTACHMENT | TEMPLATE_FILE | TEMPLATE_PREVIEW | BACKGROUND | SOUND | FONT
+file=<archivo>
+```
+
+El servicio guarda el archivo en MinIO, registra metadata en PostgreSQL/H2 y expone el contenido por:
+
+```txt
+GET /api/media/{id}/content
+```
 
 ## Pruebas locales con H2 y Swagger
 

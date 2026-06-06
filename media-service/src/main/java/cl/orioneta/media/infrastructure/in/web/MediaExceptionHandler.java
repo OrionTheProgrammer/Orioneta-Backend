@@ -1,6 +1,7 @@
 package cl.orioneta.media.infrastructure.in.web;
 
 import cl.orioneta.media.domain.exception.MediaNotFoundException;
+import cl.orioneta.media.domain.exception.MediaStorageException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,6 +19,12 @@ public class MediaExceptionHandler {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public Map<String, Object> handleNotFound(MediaNotFoundException exception) {
         return buildError(HttpStatus.NOT_FOUND, exception.getMessage());
+    }
+
+    @ExceptionHandler(MediaStorageException.class)
+    @ResponseStatus(HttpStatus.BAD_GATEWAY)
+    public Map<String, Object> handleStorage(MediaStorageException exception) {
+        return buildError(HttpStatus.BAD_GATEWAY, exception.getMessage());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

@@ -5,6 +5,11 @@ spring:
   application:
     name: media-service
 
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+
   datasource:
     url: jdbc:postgresql://localhost:5432/orioneta_media
     username: orioneta
@@ -44,3 +49,12 @@ logging:
     org.springframework: WARN
     org.hibernate: WARN
     cl.orioneta: DEBUG
+
+orioneta:
+  media:
+    public-content-base-url: ${ORIONETA_MEDIA_PUBLIC_CONTENT_BASE_URL:/api/media}
+    minio:
+      endpoint: ${ORIONETA_MEDIA_MINIO_ENDPOINT:http://localhost:9000}
+      access-key: ${ORIONETA_MEDIA_MINIO_ACCESS_KEY:orioneta}
+      secret-key: ${ORIONETA_MEDIA_MINIO_SECRET_KEY:orioneta123}
+      bucket: ${ORIONETA_MEDIA_MINIO_BUCKET:orioneta-media}

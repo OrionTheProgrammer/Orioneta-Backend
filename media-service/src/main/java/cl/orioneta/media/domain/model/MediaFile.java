@@ -15,6 +15,7 @@ public class MediaFile {
     private String contentType;
     private long size;
     private String url;
+    private String storageKey;
     private MediaPurpose purpose;
     private final LocalDateTime createdAt;
     private LocalDateTime deletedAt;
@@ -26,6 +27,7 @@ public class MediaFile {
             String contentType,
             long size,
             String url,
+            String storageKey,
             MediaPurpose purpose,
             LocalDateTime createdAt,
             LocalDateTime deletedAt
@@ -36,13 +38,27 @@ public class MediaFile {
         this.contentType = requireText(contentType, "El content type es obligatorio");
         this.size = validateSize(size);
         this.url = requireText(url, "La URL del archivo es obligatoria");
+        this.storageKey = cleanOptionalText(storageKey);
         this.purpose = Objects.requireNonNull(purpose, "El proposito del archivo es obligatorio");
         this.createdAt = createdAt == null ? LocalDateTime.now() : createdAt;
         this.deletedAt = deletedAt;
     }
 
     public static MediaFile create(UUID ownerUserId, String fileName, String contentType, long size, String url, MediaPurpose purpose) {
-        return new MediaFile(UUID.randomUUID(), ownerUserId, fileName, contentType, size, url, purpose, LocalDateTime.now(), null);
+        return new MediaFile(UUID.randomUUID(), ownerUserId, fileName, contentType, size, url, null, purpose, LocalDateTime.now(), null);
+    }
+
+    public static MediaFile createStored(
+            UUID id,
+            UUID ownerUserId,
+            String fileName,
+            String contentType,
+            long size,
+            String url,
+            String storageKey,
+            MediaPurpose purpose
+    ) {
+        return new MediaFile(id, ownerUserId, fileName, contentType, size, url, storageKey, purpose, LocalDateTime.now(), null);
     }
 
     public static MediaFile rehydrate(
@@ -52,11 +68,12 @@ public class MediaFile {
             String contentType,
             long size,
             String url,
+            String storageKey,
             MediaPurpose purpose,
             LocalDateTime createdAt,
             LocalDateTime deletedAt
     ) {
-        return new MediaFile(id, ownerUserId, fileName, contentType, size, url, purpose, createdAt, deletedAt);
+        return new MediaFile(id, ownerUserId, fileName, contentType, size, url, storageKey, purpose, createdAt, deletedAt);
     }
 
     public void delete() {
@@ -87,6 +104,10 @@ public class MediaFile {
         return url;
     }
 
+    public String getStorageKey() {
+        return storageKey;
+    }
+
     public MediaPurpose getPurpose() {
         return purpose;
     }
@@ -110,6 +131,14 @@ public class MediaFile {
     private static String requireText(String value, String message) {
         if (value == null || value.trim().isBlank()) {
             throw new IllegalArgumentException(message);
+        }
+
+        return value.trim();
+    }
+
+    private static String cleanOptionalText(String value) {
+        if (value == null || value.trim().isBlank()) {
+            return null;
         }
 
         return value.trim();

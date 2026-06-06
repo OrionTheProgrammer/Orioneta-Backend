@@ -51,6 +51,27 @@ services:
       timeout: 5s
       retries: 10
 
+  minio:
+    profiles:
+      - media
+    image: minio/minio:latest
+    container_name: orioneta-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-orioneta}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-orioneta123}
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   gateway-service:
     image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-gateway-service:${IMAGE_TAG:-latest}
     container_name: orioneta-gateway-service
@@ -245,8 +266,15 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orioneta_media
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orioneta}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orioneta}
+      ORIONETA_MEDIA_MINIO_ENDPOINT: http://minio:9000
+      ORIONETA_MEDIA_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-orioneta}
+      ORIONETA_MEDIA_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-orioneta123}
+      ORIONETA_MEDIA_MINIO_BUCKET: ${MINIO_BUCKET:-orioneta-media}
+      ORIONETA_MEDIA_PUBLIC_CONTENT_BASE_URL: ${ORIONETA_MEDIA_PUBLIC_CONTENT_BASE_URL:-/api/media}
     depends_on:
       postgres:
+        condition: service_healthy
+      minio:
         condition: service_healthy
 
   neta-market-service:
@@ -367,4 +395,5 @@ volumes:
   postgres_data:
   rabbitmq_data:
   redis_data:
+  minio_data:
   grafana_data:

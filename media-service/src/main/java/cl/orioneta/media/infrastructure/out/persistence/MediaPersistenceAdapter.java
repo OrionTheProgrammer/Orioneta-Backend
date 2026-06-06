@@ -43,6 +43,7 @@ public class MediaPersistenceAdapter implements MediaRepositoryPort {
                 mediaFile.getContentType(),
                 mediaFile.getSize(),
                 mediaFile.getUrl(),
+                mediaFile.getStorageKey(),
                 mediaFile.getPurpose(),
                 mediaFile.getCreatedAt(),
                 mediaFile.getDeletedAt()
@@ -57,6 +58,7 @@ public class MediaPersistenceAdapter implements MediaRepositoryPort {
                 entity.getContentType(),
                 entity.getSize(),
                 entity.getUrl(),
+                entity.getStorageKey(),
                 entity.getPurpose(),
                 entity.getCreatedAt(),
                 entity.getDeletedAt()
