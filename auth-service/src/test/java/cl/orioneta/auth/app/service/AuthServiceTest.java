@@ -72,6 +72,7 @@ class AuthServiceTest {
 
         assertThat(userCaptor.getValue().getEmail()).isEqualTo("ori@orioneta.cl");
         assertThat(userCaptor.getValue().getProvider()).isEqualTo(AuthProvider.EMAIL);
+        assertThat(userCaptor.getValue().getProviderUserId()).isEqualTo("ori@orioneta.cl");
         assertThat(userCaptor.getValue().hasPassword()).isTrue();
         assertThat(response.accessToken()).isEqualTo("access-token");
         assertThat(response.refreshToken()).isEqualTo("refresh-token");
