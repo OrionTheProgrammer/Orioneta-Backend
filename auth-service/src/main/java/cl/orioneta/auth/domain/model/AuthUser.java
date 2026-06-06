@@ -58,15 +58,16 @@ public class AuthUser {
 
     public static AuthUser createLocal(String email, String passwordHash, String displayName) {
         LocalDateTime now = LocalDateTime.now();
+        String normalizedEmail = validateEmail(email);
 
         return new AuthUser(
                 UUID.randomUUID(),
-                email,
+                normalizedEmail,
                 requireText(passwordHash, "El hash de password es obligatorio"),
                 displayName,
                 null,
                 AuthProvider.EMAIL,
-                null,
+                normalizedEmail,
                 Role.USER,
                 true,
                 now,
@@ -183,7 +184,7 @@ public class AuthUser {
         }
     }
 
-    private String validateEmail(String email) {
+    private static String validateEmail(String email) {
         String normalizedEmail = requireText(email, "El email es obligatorio").toLowerCase(Locale.ROOT);
         String regex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
 
