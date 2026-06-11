@@ -15,6 +15,7 @@ public class Friendship {
     private final UUID id;
     private final UUID userId;
     private final UUID friendId;
+    private final UUID conversationId;
     private final LocalDateTime createdAt;
     private FriendshipStatus status;
     private LocalDateTime updatedAt;
@@ -23,6 +24,7 @@ public class Friendship {
             UUID id,
             UUID userId,
             UUID friendId,
+            UUID conversationId,
             FriendshipStatus status,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
@@ -32,6 +34,7 @@ public class Friendship {
         this.id = Objects.requireNonNull(id, "El id de amistad es obligatorio");
         this.userId = Objects.requireNonNull(userId, "El usuario principal es obligatorio");
         this.friendId = Objects.requireNonNull(friendId, "El usuario amigo es obligatorio");
+        this.conversationId = conversationId;
         this.status = Objects.requireNonNull(status, "El estado de amistad es obligatorio");
         this.createdAt = Objects.requireNonNull(createdAt, "La fecha de creacion es obligatoria");
         this.updatedAt = Objects.requireNonNull(updatedAt, "La fecha de actualizacion es obligatoria");
@@ -41,11 +44,26 @@ public class Friendship {
      * Crea una amistad activa entre dos usuarios.
      */
     public static Friendship create(UUID firstUserId, UUID secondUserId) {
+        return create(firstUserId, secondUserId, null);
+    }
+
+    /**
+     * Crea una amistad activa asociada a un chat privado.
+     */
+    public static Friendship create(UUID firstUserId, UUID secondUserId, UUID conversationId) {
         LocalDateTime now = LocalDateTime.now();
         UUID orderedUserId = firstUserId.compareTo(secondUserId) <= 0 ? firstUserId : secondUserId;
         UUID orderedFriendId = firstUserId.compareTo(secondUserId) <= 0 ? secondUserId : firstUserId;
 
-        return new Friendship(UUID.randomUUID(), orderedUserId, orderedFriendId, FriendshipStatus.ACTIVE, now, now);
+        return new Friendship(
+                UUID.randomUUID(),
+                orderedUserId,
+                orderedFriendId,
+                conversationId,
+                FriendshipStatus.ACTIVE,
+                now,
+                now
+        );
     }
 
     /**
@@ -55,11 +73,12 @@ public class Friendship {
             UUID id,
             UUID userId,
             UUID friendId,
+            UUID conversationId,
             FriendshipStatus status,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
-        return new Friendship(id, userId, friendId, status, createdAt, updatedAt);
+        return new Friendship(id, userId, friendId, conversationId, status, createdAt, updatedAt);
     }
 
     /**
@@ -108,6 +127,10 @@ public class Friendship {
 
     public UUID getFriendId() {
         return friendId;
+    }
+
+    public UUID getConversationId() {
+        return conversationId;
     }
 
     public FriendshipStatus getStatus() {
