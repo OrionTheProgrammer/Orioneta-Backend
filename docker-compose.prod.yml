@@ -77,6 +77,8 @@ services:
       - bff-service
       - user-service
       - friendship-service
+      - conversation-service
+      - message-service
 
   bff-service:
     image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-bff-service:${IMAGE_TAG:-latest}
@@ -93,6 +95,12 @@ services:
       ORIONETA_CUSTOMIZATION_URL: http://customization-service:8088
       ORIONETA_MEDIA_URL: http://media-service:8089
       ORIONETA_NETA_MARKET_URL: http://neta-market-service:8090
+    depends_on:
+      - auth-service
+      - user-service
+      - friendship-service
+      - conversation-service
+      - message-service
 
   auth-service:
     image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-auth-service:${IMAGE_TAG:-latest}
@@ -142,6 +150,7 @@ services:
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-orioneta}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-orioneta}
       ORIONETA_SERVICES_USERS: http://user-service:8083
+      ORIONETA_CONVERSATION_URL: http://conversation-service:8085
     depends_on:
       postgres:
         condition: service_healthy
@@ -149,10 +158,10 @@ services:
         condition: service_healthy
       user-service:
         condition: service_started
+      conversation-service:
+        condition: service_started
 
   conversation-service:
-    profiles:
-      - messaging
     image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-conversation-service:${IMAGE_TAG:-latest}
     container_name: orioneta-conversation-service
     restart: unless-stopped
@@ -171,12 +180,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-      conversation-service:
-        condition: service_started
 
   message-service:
-    profiles:
-      - messaging
     image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-message-service:${IMAGE_TAG:-latest}
     container_name: orioneta-message-service
     restart: unless-stopped
@@ -189,11 +194,14 @@ services:
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-orioneta}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-orioneta}
+      ORIONETA_CONVERSATION_URL: http://conversation-service:8085
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      conversation-service:
+        condition: service_started
 
   notification-service:
     profiles:
