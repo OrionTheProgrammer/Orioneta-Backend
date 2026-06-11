@@ -1,6 +1,10 @@
 package cl.orioneta.realtime.messaging;
 
+import cl.orioneta.realtime.config.RabbitMQConfig;
+import cl.orioneta.realtime.dto.RealtimeMessageDTO;
 import cl.orioneta.realtime.service.RealtimeEventDispatcher;
+import cl.orioneta.shared.events.MessageSentEvent;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,5 +18,20 @@ public class MessageEventConsumer {
 
     public void broadcastMessageEvent(String payload) {
         realtimeEventDispatcher.dispatchSystemPayload(payload);
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.REALTIME_MESSAGE_QUEUE)
+    public void consumeMessageSent(MessageSentEvent event) {
+        realtimeEventDispatcher.dispatchSystemEvent(new RealtimeMessageDTO(
+                "MESSAGE_SENT",
+                null,
+                event.conversationId(),
+                event.senderId(),
+                null,
+                event.messageId(),
+                event.messageType(),
+                event.content(),
+                event.occurredAt()
+        ));
     }
 }

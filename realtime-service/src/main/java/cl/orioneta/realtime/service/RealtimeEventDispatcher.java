@@ -69,10 +69,19 @@ public class RealtimeEventDispatcher {
             RealtimeMessageDTO event = objectMapper.readValue(payload, RealtimeMessageDTO.class)
                     .withDefaults(null);
 
-            dispatchEvent(event, false);
+            dispatchSystemEvent(event);
         } catch (JsonProcessingException exception) {
             throw new IllegalArgumentException("El evento de realtime no tiene un formato JSON valido", exception);
         }
+    }
+
+    /**
+     * Procesa un evento ya tipado generado por otro servicio del backend.
+     *
+     * @param event evento listo para enviar.
+     */
+    public void dispatchSystemEvent(RealtimeMessageDTO event) {
+        dispatchEvent(event.withDefaults(null), false);
     }
 
     /**

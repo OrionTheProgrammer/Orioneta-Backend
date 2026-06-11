@@ -7,6 +7,8 @@ import cl.orioneta.friendships.infrastructure.config.RabbitMQConfig;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
+import java.time.ZoneId;
+
 /**
  * Publicador RabbitMQ de eventos de amistad.
  */
@@ -24,7 +26,12 @@ public class RabbitFriendshipEventPublisher implements FriendshipEventPublisher 
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.FRIENDSHIP_EXCHANGE,
                 RabbitMQConfig.FRIEND_REQUEST_SENT_ROUTING_KEY,
-                event
+                new cl.orioneta.shared.events.FriendRequestSentEvent(
+                        event.requestId(),
+                        event.senderUserId(),
+                        event.receiverUserId(),
+                        event.createdAt().atZone(ZoneId.systemDefault()).toInstant()
+                )
         );
     }
 
@@ -33,7 +40,12 @@ public class RabbitFriendshipEventPublisher implements FriendshipEventPublisher 
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.FRIENDSHIP_EXCHANGE,
                 RabbitMQConfig.FRIEND_REQUEST_ACCEPTED_ROUTING_KEY,
-                event
+                new cl.orioneta.shared.events.FriendRequestAcceptedEvent(
+                        event.requestId(),
+                        event.senderUserId(),
+                        event.receiverUserId(),
+                        event.acceptedAt().atZone(ZoneId.systemDefault()).toInstant()
+                )
         );
     }
 }
