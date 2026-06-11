@@ -45,6 +45,7 @@
         <java.version>25</java.version>
         <spring-cloud.version>2025.0.0</spring-cloud.version>
         <springdoc.version>2.8.9</springdoc.version>
+        <minio.version>8.5.17</minio.version>
         <jacoco.version>0.8.14</jacoco.version>
         <sonar.maven.plugin.version>5.1.0.4751</sonar.maven.plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
