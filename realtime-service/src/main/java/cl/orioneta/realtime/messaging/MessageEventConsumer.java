@@ -1,18 +1,18 @@
 package cl.orioneta.realtime.messaging;
 
-import cl.orioneta.realtime.websocket.WebSocketSessionRegistry;
+import cl.orioneta.realtime.service.RealtimeEventDispatcher;
 import org.springframework.stereotype.Component;
 
 @Component
 public class MessageEventConsumer {
 
-    private final WebSocketSessionRegistry sessionRegistry;
+    private final RealtimeEventDispatcher realtimeEventDispatcher;
 
-    public MessageEventConsumer(WebSocketSessionRegistry sessionRegistry) {
-        this.sessionRegistry = sessionRegistry;
+    public MessageEventConsumer(RealtimeEventDispatcher realtimeEventDispatcher) {
+        this.realtimeEventDispatcher = realtimeEventDispatcher;
     }
 
     public void broadcastMessageEvent(String payload) {
-        sessionRegistry.broadcast(payload);
+        realtimeEventDispatcher.dispatchSystemPayload(payload);
     }
 }
