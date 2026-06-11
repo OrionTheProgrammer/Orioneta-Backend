@@ -42,6 +42,8 @@ env:
     auth-service
     user-service
     friendship-service
+    conversation-service
+    message-service
 
 jobs:
   detect-changes:
@@ -568,7 +570,7 @@ jobs:
           }
 
           INFRA_SERVICES="postgres rabbitmq"
-          MVP_APP_SERVICES="auth-service user-service friendship-service bff-service gateway-service"
+          MVP_APP_SERVICES="auth-service user-service conversation-service message-service friendship-service bff-service gateway-service"
 
           if [ -z "${CHANGED_SERVICES}" ]; then
             CHANGED_SERVICES=""

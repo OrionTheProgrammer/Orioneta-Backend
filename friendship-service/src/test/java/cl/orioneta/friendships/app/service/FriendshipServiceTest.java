@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import cl.orioneta.friendships.app.client.ConversationDirectory;
 import cl.orioneta.friendships.app.client.UserDirectory;
 import cl.orioneta.friendships.app.dto.FriendRequestResponse;
 import cl.orioneta.friendships.app.dto.FriendshipResponse;
@@ -37,6 +38,7 @@ class FriendshipServiceTest {
 
     private FriendshipRepository friendshipRepository;
     private UserDirectory userDirectory;
+    private ConversationDirectory conversationDirectory;
     private FriendshipEventPublisher eventPublisher;
     private FriendshipService friendshipService;
 
@@ -44,8 +46,15 @@ class FriendshipServiceTest {
     void setUp() {
         friendshipRepository = Mockito.mock(FriendshipRepository.class);
         userDirectory = Mockito.mock(UserDirectory.class);
+        conversationDirectory = Mockito.mock(ConversationDirectory.class);
         eventPublisher = Mockito.mock(FriendshipEventPublisher.class);
-        friendshipService = new FriendshipService(friendshipRepository, userDirectory, eventPublisher, new FriendshipMapper());
+        friendshipService = new FriendshipService(
+                friendshipRepository,
+                userDirectory,
+                conversationDirectory,
+                eventPublisher,
+                new FriendshipMapper()
+        );
     }
 
     @Test
@@ -98,10 +107,12 @@ class FriendshipServiceTest {
         UserSummary sender = fakeUser();
         UserSummary receiver = fakeUser();
         FriendRequest request = FriendRequest.create(sender.userID(), receiver.userID());
+        UUID conversationId = UUID.randomUUID();
 
         when(friendshipRepository.findRequestById(request.getId())).thenReturn(Optional.of(request));
         when(friendshipRepository.saveFriendship(any(Friendship.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(friendshipRepository.saveRequest(any(FriendRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(conversationDirectory.createPrivateConversation(sender.userID(), receiver.userID())).thenReturn(conversationId);
 
         FriendshipResponse response = friendshipService.acceptRequest(
                 request.getId(),
@@ -109,7 +120,9 @@ class FriendshipServiceTest {
         );
 
         assertThat(response.status()).isEqualTo(FriendshipStatus.ACTIVE);
+        assertThat(response.conversationId()).isEqualTo(conversationId);
         assertThat(request.getStatus()).isEqualTo(FriendRequestStatus.ACCEPTED);
+        verify(conversationDirectory).createPrivateConversation(sender.userID(), receiver.userID());
         verify(friendshipRepository).saveRequest(request);
         verify(eventPublisher).publishFriendRequestAccepted(any(FriendRequestAcceptedEvent.class));
     }

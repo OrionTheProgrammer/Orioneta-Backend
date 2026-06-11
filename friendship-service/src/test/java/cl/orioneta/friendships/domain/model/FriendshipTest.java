@@ -20,6 +20,7 @@ class FriendshipTest {
 
         assertThat(friendship.getId()).isNotNull();
         assertThat(friendship.getStatus()).isEqualTo(FriendshipStatus.ACTIVE);
+        assertThat(friendship.getConversationId()).isNull();
         assertThat(friendship.containsUser(firstUserId)).isTrue();
         assertThat(friendship.containsUser(secondUserId)).isTrue();
         assertThat(friendship.getUserId().compareTo(friendship.getFriendId())).isLessThanOrEqualTo(0);
@@ -32,6 +33,15 @@ class FriendshipTest {
         friendship.block();
 
         assertThat(friendship.getStatus()).isEqualTo(FriendshipStatus.BLOCKED);
+    }
+
+    @Test
+    void keepsConversationIdWhenFriendshipStartsWithPrivateChat() {
+        UUID conversationId = UUID.randomUUID();
+
+        Friendship friendship = Friendship.create(fakeUserId(), fakeUserId(), conversationId);
+
+        assertThat(friendship.getConversationId()).isEqualTo(conversationId);
     }
 
     private UUID fakeUserId() {

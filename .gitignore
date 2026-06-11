@@ -21,6 +21,7 @@ Thumbs.db
 
 # Docker volumes and local runtime
 docker-data/
+.local/
 
 # Maven
 .mvn/wrapper/maven-wrapper.jar

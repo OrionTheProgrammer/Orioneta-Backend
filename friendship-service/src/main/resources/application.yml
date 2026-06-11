@@ -27,7 +27,8 @@ spring:
 
 orioneta:
   services:
-    users: http://localhost:8083
+    users: ${ORIONETA_USER_URL:http://localhost:8083}
+    conversations: ${ORIONETA_CONVERSATION_URL:http://localhost:8085}
 
 management:
   endpoints:

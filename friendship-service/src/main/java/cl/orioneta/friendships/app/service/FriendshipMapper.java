@@ -28,6 +28,7 @@ public class FriendshipMapper {
                 friendship.getId(),
                 friendship.getUserId(),
                 friendship.getFriendId(),
+                friendship.getConversationId(),
                 friendship.getStatus(),
                 friendship.getCreatedAt(),
                 friendship.getUpdatedAt()

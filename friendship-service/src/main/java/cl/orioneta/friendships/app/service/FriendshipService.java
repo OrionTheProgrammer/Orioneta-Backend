@@ -1,5 +1,6 @@
 package cl.orioneta.friendships.app.service;
 
+import cl.orioneta.friendships.app.client.ConversationDirectory;
 import cl.orioneta.friendships.app.client.UserDirectory;
 import cl.orioneta.friendships.app.dto.BlockUserRequest;
 import cl.orioneta.friendships.app.dto.FriendRequestResponse;
@@ -33,17 +34,20 @@ public class FriendshipService {
 
     private final FriendshipRepository friendshipRepository;
     private final UserDirectory userDirectory;
+    private final ConversationDirectory conversationDirectory;
     private final FriendshipEventPublisher eventPublisher;
     private final FriendshipMapper friendshipMapper;
 
     public FriendshipService(
             FriendshipRepository friendshipRepository,
             UserDirectory userDirectory,
+            ConversationDirectory conversationDirectory,
             FriendshipEventPublisher eventPublisher,
             FriendshipMapper friendshipMapper
     ) {
         this.friendshipRepository = friendshipRepository;
         this.userDirectory = userDirectory;
+        this.conversationDirectory = conversationDirectory;
         this.eventPublisher = eventPublisher;
         this.friendshipMapper = friendshipMapper;
     }
@@ -75,7 +79,15 @@ public class FriendshipService {
         FriendRequest friendRequest = findRequestOrFail(requestId);
         friendRequest.accept(request.requesterUserId());
 
-        Friendship friendship = Friendship.create(friendRequest.getSenderUserId(), friendRequest.getReceiverUserId());
+        UUID conversationId = conversationDirectory.createPrivateConversation(
+                friendRequest.getSenderUserId(),
+                friendRequest.getReceiverUserId()
+        );
+        Friendship friendship = Friendship.create(
+                friendRequest.getSenderUserId(),
+                friendRequest.getReceiverUserId(),
+                conversationId
+        );
         Friendship savedFriendship = friendshipRepository.saveFriendship(friendship);
         friendshipRepository.saveRequest(friendRequest);
 

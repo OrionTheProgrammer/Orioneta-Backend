@@ -105,6 +105,7 @@ public class FriendshipPersistenceAdapter implements FriendshipRepository {
                 friendship.getId(),
                 friendship.getUserId(),
                 friendship.getFriendId(),
+                friendship.getConversationId(),
                 friendship.getStatus(),
                 friendship.getCreatedAt(),
                 friendship.getUpdatedAt()
@@ -116,6 +117,7 @@ public class FriendshipPersistenceAdapter implements FriendshipRepository {
                 entity.getId(),
                 entity.getUserId(),
                 entity.getFriendId(),
+                entity.getConversationId(),
                 entity.getStatus(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
