@@ -40,6 +40,8 @@ env:
     auth-service
     user-service
     friendship-service
+    conversation-service
+    message-service
     bff-service
     gateway-service
 
