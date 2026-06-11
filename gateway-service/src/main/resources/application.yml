@@ -48,10 +48,10 @@ spring:
             uri: ${ORIONETA_NETA_MARKET_URL:http://localhost:8090}
             predicates:
               - Path=/api/neta-market/**
-          - id: realtime-service
+          - id: realtime-api
             uri: ${ORIONETA_REALTIME_URL:http://localhost:8091}
             predicates:
-              - Path=/ws/**
+              - Path=/api/realtime/**
           - id: moderation-service
             uri: ${ORIONETA_MODERATION_URL:http://localhost:8092}
             predicates:

@@ -45,6 +45,10 @@ public class MediaFile {
         return new MediaFile(UUID.randomUUID(), ownerUserId, fileName, contentType, size, url, purpose, LocalDateTime.now(), null);
     }
 
+    public static MediaFile createWithId(UUID id, UUID ownerUserId, String fileName, String contentType, long size, String url, MediaPurpose purpose) {
+        return new MediaFile(id, ownerUserId, fileName, contentType, size, url, purpose, LocalDateTime.now(), null);
+    }
+
     public static MediaFile rehydrate(
             UUID id,
             UUID ownerUserId,

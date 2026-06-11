@@ -34,6 +34,9 @@ public class FriendshipEntity {
     @Column(name = "friend_id", nullable = false)
     private UUID friendId;
 
+    @Column(name = "conversation_id")
+    private UUID conversationId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private FriendshipStatus status;
@@ -51,6 +54,7 @@ public class FriendshipEntity {
             UUID id,
             UUID userId,
             UUID friendId,
+            UUID conversationId,
             FriendshipStatus status,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
@@ -58,6 +62,7 @@ public class FriendshipEntity {
         this.id = id;
         this.userId = userId;
         this.friendId = friendId;
+        this.conversationId = conversationId;
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -93,6 +98,10 @@ public class FriendshipEntity {
 
     public UUID getFriendId() {
         return friendId;
+    }
+
+    public UUID getConversationId() {
+        return conversationId;
     }
 
     public FriendshipStatus getStatus() {

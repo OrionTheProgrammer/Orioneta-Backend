@@ -38,6 +38,15 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
+orioneta:
+  media:
+    storage:
+      endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+      access-key: ${MINIO_ACCESS_KEY:orioneta}
+      secret-key: ${MINIO_SECRET_KEY:orioneta123}
+      bucket: ${MINIO_BUCKET:orioneta-media}
+      public-base-url: ${ORIONETA_MEDIA_PUBLIC_BASE_URL:http://localhost:8080}
+
 logging:
   level:
     root: INFO

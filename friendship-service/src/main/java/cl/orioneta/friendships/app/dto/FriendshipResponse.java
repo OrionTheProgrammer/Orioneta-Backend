@@ -11,6 +11,7 @@ public record FriendshipResponse(
         UUID id,
         UUID userId,
         UUID friendId,
+        UUID conversationId,
         FriendshipStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt

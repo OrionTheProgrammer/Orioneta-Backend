@@ -1,5 +1,6 @@
 package cl.orioneta.friendships.infrastructure.web;
 
+import cl.orioneta.friendships.domain.exception.ConversationCreationException;
 import cl.orioneta.friendships.domain.exception.FriendRequestNotFoundException;
 import cl.orioneta.friendships.domain.exception.FriendshipAlreadyExistsException;
 import cl.orioneta.friendships.domain.exception.FriendshipNotFoundException;
@@ -36,6 +37,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiErrorResponse handleInvalidData(RuntimeException exception) {
         return buildError(HttpStatus.BAD_REQUEST, exception.getMessage(), Map.of());
+    }
+
+    @ExceptionHandler(ConversationCreationException.class)
+    @ResponseStatus(HttpStatus.BAD_GATEWAY)
+    public ApiErrorResponse handleConversationCreation(ConversationCreationException exception) {
+        return buildError(HttpStatus.BAD_GATEWAY, exception.getMessage(), Map.of());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
