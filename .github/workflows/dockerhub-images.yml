@@ -122,6 +122,11 @@ jobs:
             changed_services="$(echo "$changed_services" | xargs || true)"
           fi
 
+          if [ "$deploy_files_changed" = "true" ] && [ -z "$changed_services" ]; then
+            echo "Deploy files changed without service code changes: building MVP services to ensure required images exist"
+            changed_services="${MVP_SERVICES}"
+          fi
+
           if [ -n "$changed_services" ]; then
             has_service_changes="true"
           else
