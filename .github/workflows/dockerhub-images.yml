@@ -44,6 +44,8 @@ env:
     friendship-service
     conversation-service
     message-service
+    realtime-service
+    media-service
 
 jobs:
   detect-changes:
@@ -533,6 +535,7 @@ jobs:
           cd ~/orioneta-backend
 
           export COMPOSE_PARALLEL_LIMIT=1
+          export COMPOSE_PROFILES=media,realtime
           export DOCKER_CLIENT_TIMEOUT=600
           export COMPOSE_HTTP_TIMEOUT=600
 
@@ -569,8 +572,8 @@ jobs:
             done
           }
 
-          INFRA_SERVICES="postgres rabbitmq"
-          MVP_APP_SERVICES="auth-service user-service conversation-service message-service friendship-service bff-service gateway-service"
+          INFRA_SERVICES="postgres rabbitmq redis minio"
+          MVP_APP_SERVICES="auth-service user-service conversation-service message-service friendship-service bff-service gateway-service realtime-service media-service"
 
           if [ -z "${CHANGED_SERVICES}" ]; then
             CHANGED_SERVICES=""

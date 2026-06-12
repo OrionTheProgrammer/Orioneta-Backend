@@ -31,16 +31,23 @@ env:
   MVP_SERVICES: >-
     postgres
     rabbitmq
+    redis
+    minio
     auth-service
     user-service
     friendship-service
+    conversation-service
+    message-service
     bff-service
     gateway-service
+    realtime-service
+    media-service
 
   FULL_SERVICES: >-
     postgres
     rabbitmq
     redis
+    minio
     auth-service
     user-service
     friendship-service
@@ -313,6 +320,7 @@ jobs:
           fi
 
           export COMPOSE_PARALLEL_LIMIT=1
+          export COMPOSE_PROFILES=media,realtime
           export DOCKER_CLIENT_TIMEOUT=600
           export COMPOSE_HTTP_TIMEOUT=600
 
