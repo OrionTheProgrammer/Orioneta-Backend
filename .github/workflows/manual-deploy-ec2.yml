@@ -238,8 +238,14 @@ jobs:
           port="${{ secrets.EC2_PORT }}"
           key="$HOME/.ssh/orioneta-ec2"
 
+          if [ "${{ github.event.inputs.deploy_mode }}" = "full" ]; then
+            compose_profiles="media,realtime,messaging,customization,market,audit"
+          else
+            compose_profiles="media,realtime"
+          fi
+
           ssh -i "$key" -p "$port" -o BatchMode=yes -o ConnectTimeout=20 "$remote" \
-            "DOCKERHUB_USERNAME='${{ secrets.DOCKERHUB_USERNAME }}' IMAGE_TAG='${{ github.event.inputs.image_tag }}' bash -s" <<'REMOTE'
+            "DOCKERHUB_USERNAME='${{ secrets.DOCKERHUB_USERNAME }}' IMAGE_TAG='${{ github.event.inputs.image_tag }}' COMPOSE_PROFILES_VALUE='$compose_profiles' bash -s" <<'REMOTE'
           set -euo pipefail
 
           cd ~/orioneta-backend
@@ -259,7 +265,7 @@ jobs:
           RABBITMQ_DEFAULT_USER=orioneta
           RABBITMQ_DEFAULT_PASS=orioneta
 
-          COMPOSE_PROFILES=
+          COMPOSE_PROFILES=${COMPOSE_PROFILES_VALUE}
           JAVA_TOOL_OPTIONS=-Xms64m -Xmx256m -XX:+UseSerialGC
 
           ORIONETA_JWT_ISSUER=orioneta-auth-service
@@ -279,10 +285,17 @@ jobs:
             else
               printf 'IMAGE_TAG=%s\n' "$IMAGE_TAG" >> .env
             fi
+
+            if grep -q '^COMPOSE_PROFILES=' .env; then
+              sed -i "s#^COMPOSE_PROFILES=.*#COMPOSE_PROFILES=${COMPOSE_PROFILES_VALUE}#" .env
+            else
+              printf 'COMPOSE_PROFILES=%s\n' "$COMPOSE_PROFILES_VALUE" >> .env
+            fi
           fi
 
           echo "Remote .env ready"
           echo "IMAGE_TAG=${IMAGE_TAG}"
+          echo "COMPOSE_PROFILES=${COMPOSE_PROFILES_VALUE}"
           REMOTE
 
       - name: Install stack
@@ -295,8 +308,10 @@ jobs:
 
           if [ "${{ github.event.inputs.deploy_mode }}" = "full" ]; then
             services="${FULL_SERVICES}"
+            compose_profiles="media,realtime,messaging,customization,market,audit"
           else
             services="${MVP_SERVICES}"
+            compose_profiles="media,realtime"
           fi
 
           ssh -i "$key" -p "$port" \
@@ -305,7 +320,7 @@ jobs:
             -o ServerAliveInterval=30 \
             -o ServerAliveCountMax=10 \
             "$remote" \
-            "DOCKERHUB_USERNAME='${{ secrets.DOCKERHUB_USERNAME }}' DOCKERHUB_TOKEN='${{ secrets.DOCKERHUB_TOKEN }}' SERVICES='$services' FORCE_RECREATE='${{ github.event.inputs.force_recreate }}' bash -s" <<'REMOTE'
+            "DOCKERHUB_USERNAME='${{ secrets.DOCKERHUB_USERNAME }}' DOCKERHUB_TOKEN='${{ secrets.DOCKERHUB_TOKEN }}' SERVICES='$services' FORCE_RECREATE='${{ github.event.inputs.force_recreate }}' COMPOSE_PROFILES_VALUE='$compose_profiles' bash -s" <<'REMOTE'
           set -euo pipefail
 
           cd ~/orioneta-backend
@@ -320,12 +335,14 @@ jobs:
           fi
 
           export COMPOSE_PARALLEL_LIMIT=1
-          export COMPOSE_PROFILES=media,realtime
+          export COMPOSE_PROFILES="$COMPOSE_PROFILES_VALUE"
           export DOCKER_CLIENT_TIMEOUT=600
           export COMPOSE_HTTP_TIMEOUT=600
 
           echo "Services to install:"
           echo "$SERVICES"
+          echo "Compose profiles:"
+          echo "$COMPOSE_PROFILES"
 
           echo "DockerHub login..."
           printf '%s\n' "$DOCKERHUB_TOKEN" | "${docker_cmd[@]}" login docker.io -u "$DOCKERHUB_USERNAME" --password-stdin

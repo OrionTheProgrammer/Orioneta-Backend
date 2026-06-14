@@ -8,6 +8,15 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      build_scope:
+        description: "Servicios a construir"
+        required: true
+        default: "mvp"
+        type: choice
+        options:
+          - mvp
+          - full
 
 permissions:
   contents: read
@@ -66,6 +75,8 @@ jobs:
 
       - name: Detect changed files and services
         id: detect
+        env:
+          BUILD_SCOPE: ${{ github.event.inputs.build_scope || 'mvp' }}
         run: |
           set -euo pipefail
 
@@ -74,8 +85,14 @@ jobs:
           echo "SHA: ${GITHUB_SHA}"
 
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] || [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            echo "Manual/tag execution: building all MVP services"
-            changed_services="${MVP_SERVICES}"
+            if [ "${BUILD_SCOPE}" = "full" ]; then
+              echo "Manual/tag execution: building all services"
+              changed_services="${SERVICES}"
+            else
+              echo "Manual/tag execution: building MVP services"
+              changed_services="${MVP_SERVICES}"
+            fi
+
             deploy_files_changed="true"
           else
             before_sha="${{ github.event.before }}"
