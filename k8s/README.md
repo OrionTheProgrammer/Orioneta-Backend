@@ -9,16 +9,25 @@ k8s/
 ├── kustomization.yaml          # Punto de entrada del despliegue
 ├── namespace.yaml              # Namespace orioneta
 ├── shared-config.yaml          # URLs internas y configuracion comun
-├── secrets.example.yaml        # Valores de ejemplo, reemplazar en produccion
-├── infrastructure.yaml         # PostgreSQL, RabbitMQ, Redis y MinIO
+├── storageclass.yaml           # StorageClass EBS opcional para clusters con permisos IAM
+├── secrets.example.yaml        # Valores de ejemplo, no se aplica por defecto
+├── infrastructure.yaml         # PostgreSQL, RabbitMQ, Redis y MinIO para entorno de prueba
 ├── applications.yaml           # Deployments y Services de microservicios
 └── ingress/
-    └── orioneta-ingress.yaml   # Entrada por gateway-service
+    └── orioneta-ingress.yaml   # Entrada opcional si instalas ingress-nginx
 ```
 
 ## 1. Configurar imagenes
 
-Antes de aplicar en un cluster real, cambia el usuario DockerHub y el tag:
+Por defecto, Kustomize usa las imagenes publicadas en DockerHub bajo:
+
+```txt
+oriontheprogrammer
+```
+
+Los `Dockerfile` usan `eclipse-temurin:25-jre-alpine` para mantener imagenes Java 25 mas livianas.
+
+Si necesitas cambiar el usuario DockerHub o el tag:
 
 ```bash
 cd k8s
@@ -45,7 +54,8 @@ audit-service
 
 ## 2. Crear secretos reales
 
-`secrets.example.yaml` existe para desarrollo y pruebas. Para produccion, crea el secret manualmente o desde tu gestor de secretos:
+`secrets.example.yaml` existe como referencia y no se aplica desde `kustomization.yaml`.
+Para produccion, crea el secret manualmente o desde tu gestor de secretos:
 
 ```bash
 kubectl -n orioneta create secret generic orioneta-secrets \
@@ -63,11 +73,29 @@ kubectl -n orioneta create secret generic orioneta-secrets \
   --from-literal=GITHUB_CLIENT_SECRET='CAMBIAR'
 ```
 
-Si creas el secret real por fuera, puedes quitar `secrets.example.yaml` de `kustomization.yaml` antes de aplicar.
+El secret real debe existir antes de ejecutar `kubectl apply -k k8s`.
 
-## 3. TLS e Ingress
+## 3. Almacenamiento
 
-El Ingress usa:
+`infrastructure.yaml` usa `emptyDir` para PostgreSQL, RabbitMQ, Redis y MinIO. Esto permite levantar el stack en AWS Academy/Lab sin permisos IAM para EBS CSI, pero los datos se pierden si el pod se recrea.
+
+Para produccion, cambia esos volumenes a PVCs y usa `storageclass.yaml` junto al add-on `aws-ebs-csi-driver` configurado con IRSA o EKS Pod Identity.
+
+## 4. Entrada externa
+
+Por defecto, `gateway-service` se publica como `Service` tipo `LoadBalancer`.
+En EKS esto crea un NLB internet-facing y expone el puerto `80` hacia el puerto interno `8080` del gateway.
+
+Verifica el hostname con:
+
+```bash
+kubectl -n orioneta get svc gateway-service
+```
+
+## 5. TLS e Ingress opcional
+
+`ingress/orioneta-ingress.yaml` queda como referencia para cuando instales un controlador `nginx`.
+Si lo aplicas manualmente, usa:
 
 ```txt
 host: orioneta.duckdns.org
@@ -83,7 +111,7 @@ kubectl -n orioneta create secret tls orioneta-tls \
   --key=/ruta/privkey.pem
 ```
 
-## 4. Aplicar
+## 6. Aplicar
 
 Desde la raiz del repo:
 
@@ -96,10 +124,9 @@ Verifica:
 ```bash
 kubectl -n orioneta get pods
 kubectl -n orioneta get svc
-kubectl -n orioneta get ingress
 ```
 
-## 5. Health checks
+## 7. Health checks
 
 Los microservicios usan Actuator:
 
@@ -110,7 +137,7 @@ Los microservicios usan Actuator:
 
 Los probes ya estan configurados en `applications.yaml`.
 
-## 6. Orden mental de arranque
+## 8. Orden mental de arranque
 
 Kubernetes no usa `depends_on` como Docker Compose. Los servicios pueden arrancar en paralelo y reiniciarse hasta que PostgreSQL, RabbitMQ, Redis o MinIO esten listos. Eso es normal.
 

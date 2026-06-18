@@ -5,52 +5,51 @@ namespace: orioneta
 
 resources:
   - namespace.yaml
+  - storageclass.yaml
   - shared-config.yaml
-  - secrets.example.yaml
   - infrastructure.yaml
   - applications.yaml
-  - ingress/orioneta-ingress.yaml
 
 images:
   - name: orioneta-gateway-service
-    newName: docker.io/REPLACE_DOCKERHUB_USERNAME/orioneta-gateway-service
+    newName: docker.io/oriontheprogrammer/orioneta-gateway-service
     newTag: latest
   - name: orioneta-bff-service
-    newName: docker.io/REPLACE_DOCKERHUB_USERNAME/orioneta-bff-service
+    newName: docker.io/oriontheprogrammer/orioneta-bff-service
     newTag: latest
   - name: orioneta-auth-service
-    newName: docker.io/REPLACE_DOCKERHUB_USERNAME/orioneta-auth-service
+    newName: docker.io/oriontheprogrammer/orioneta-auth-service
     newTag: latest
   - name: orioneta-user-service
-    newName: docker.io/REPLACE_DOCKERHUB_USERNAME/orioneta-user-service
+    newName: docker.io/oriontheprogrammer/orioneta-user-service
     newTag: latest
   - name: orioneta-friendship-service
-    newName: docker.io/REPLACE_DOCKERHUB_USERNAME/orioneta-friendship-service
+    newName: docker.io/oriontheprogrammer/orioneta-friendship-service
     newTag: latest
   - name: orioneta-conversation-service
-    newName: docker.io/REPLACE_DOCKERHUB_USERNAME/orioneta-conversation-service
+    newName: docker.io/oriontheprogrammer/orioneta-conversation-service
     newTag: latest
   - name: orioneta-message-service
-    newName: docker.io/REPLACE_DOCKERHUB_USERNAME/orioneta-message-service
+    newName: docker.io/oriontheprogrammer/orioneta-message-service
     newTag: latest
   - name: orioneta-notification-service
-    newName: docker.io/REPLACE_DOCKERHUB_USERNAME/orioneta-notification-service
+    newName: docker.io/oriontheprogrammer/orioneta-notification-service
     newTag: latest
   - name: orioneta-customization-service
-    newName: docker.io/REPLACE_DOCKERHUB_USERNAME/orioneta-customization-service
+    newName: docker.io/oriontheprogrammer/orioneta-customization-service
     newTag: latest
   - name: orioneta-media-service
-    newName: docker.io/REPLACE_DOCKERHUB_USERNAME/orioneta-media-service
+    newName: docker.io/oriontheprogrammer/orioneta-media-service
     newTag: latest
   - name: orioneta-neta-market-service
-    newName: docker.io/REPLACE_DOCKERHUB_USERNAME/orioneta-neta-market-service
+    newName: docker.io/oriontheprogrammer/orioneta-neta-market-service
     newTag: latest
   - name: orioneta-realtime-service
-    newName: docker.io/REPLACE_DOCKERHUB_USERNAME/orioneta-realtime-service
+    newName: docker.io/oriontheprogrammer/orioneta-realtime-service
     newTag: latest
   - name: orioneta-moderation-service
-    newName: docker.io/REPLACE_DOCKERHUB_USERNAME/orioneta-moderation-service
+    newName: docker.io/oriontheprogrammer/orioneta-moderation-service
     newTag: latest
   - name: orioneta-audit-service
-    newName: docker.io/REPLACE_DOCKERHUB_USERNAME/orioneta-audit-service
+    newName: docker.io/oriontheprogrammer/orioneta-audit-service
     newTag: latest

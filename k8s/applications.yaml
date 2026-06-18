@@ -19,7 +19,7 @@ spec:
       containers:
         - name: gateway-service
           image: orioneta-gateway-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8080
@@ -54,12 +54,17 @@ metadata:
   labels:
     app.kubernetes.io/name: gateway-service
     app.kubernetes.io/part-of: orioneta
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
 spec:
+  type: LoadBalancer
   selector:
     app.kubernetes.io/name: gateway-service
   ports:
     - name: http
-      port: 8080
+      port: 80
       targetPort: http
 ---
 apiVersion: apps/v1
@@ -83,7 +88,7 @@ spec:
       containers:
         - name: bff-service
           image: orioneta-bff-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8081
@@ -147,7 +152,7 @@ spec:
       containers:
         - name: auth-service
           image: orioneta-auth-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8082
@@ -224,7 +229,7 @@ spec:
       containers:
         - name: user-service
           image: orioneta-user-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8083
@@ -301,7 +306,7 @@ spec:
       containers:
         - name: friendship-service
           image: orioneta-friendship-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8084
@@ -392,7 +397,7 @@ spec:
       containers:
         - name: conversation-service
           image: orioneta-conversation-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8085
@@ -483,7 +488,7 @@ spec:
       containers:
         - name: message-service
           image: orioneta-message-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8086
@@ -574,7 +579,7 @@ spec:
       containers:
         - name: notification-service
           image: orioneta-notification-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8087
@@ -665,7 +670,7 @@ spec:
       containers:
         - name: customization-service
           image: orioneta-customization-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8088
@@ -756,7 +761,7 @@ spec:
       containers:
         - name: media-service
           image: orioneta-media-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8089
@@ -843,7 +848,7 @@ spec:
       containers:
         - name: neta-market-service
           image: orioneta-neta-market-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8090
@@ -934,7 +939,7 @@ spec:
       containers:
         - name: realtime-service
           image: orioneta-realtime-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8091
@@ -1017,7 +1022,7 @@ spec:
       containers:
         - name: moderation-service
           image: orioneta-moderation-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8092
@@ -1108,7 +1113,7 @@ spec:
       containers:
         - name: audit-service
           image: orioneta-audit-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8093
