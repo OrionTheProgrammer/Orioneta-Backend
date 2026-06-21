@@ -77,9 +77,9 @@ El secret real debe existir antes de ejecutar `kubectl apply -k k8s`.
 
 ## 3. Almacenamiento
 
-`infrastructure.yaml` usa `emptyDir` para PostgreSQL, RabbitMQ, Redis y MinIO. Esto permite levantar el stack en AWS Academy/Lab sin permisos IAM para EBS CSI, pero los datos se pierden si el pod se recrea.
+`infrastructure.yaml` usa PVCs sobre volumenes EBS `gp3` cifrados para PostgreSQL, RabbitMQ, Redis y MinIO.
 
-Para produccion, cambia esos volumenes a PVCs y usa `storageclass.yaml` junto al add-on `aws-ebs-csi-driver` configurado con IRSA o EKS Pod Identity.
+`storageclass.yaml` usa el provisionador `ebs.csi.eks.amazonaws.com` incluido en EKS Auto Mode. Si despliegas en un cluster EKS tradicional, cambia el provisionador a `ebs.csi.aws.com` e instala el add-on `aws-ebs-csi-driver` con IRSA o EKS Pod Identity.
 
 ## 4. Entrada externa
 

@@ -7,6 +7,8 @@ metadata:
     app.kubernetes.io/part-of: orioneta
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: gateway-service
@@ -34,12 +36,16 @@ spec:
               port: http
             initialDelaySeconds: 20
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             initialDelaySeconds: 45
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 8
           resources:
             requests:
               cpu: 75m
@@ -76,6 +82,8 @@ metadata:
     app.kubernetes.io/part-of: orioneta
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: bff-service
@@ -103,12 +111,16 @@ spec:
               port: http
             initialDelaySeconds: 20
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             initialDelaySeconds: 45
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 8
           resources:
             requests:
               cpu: 75m
@@ -140,6 +152,8 @@ metadata:
     app.kubernetes.io/part-of: orioneta
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: auth-service
@@ -180,12 +194,16 @@ spec:
               port: http
             initialDelaySeconds: 25
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             initialDelaySeconds: 50
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 8
           resources:
             requests:
               cpu: 100m
@@ -217,6 +235,8 @@ metadata:
     app.kubernetes.io/part-of: orioneta
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: user-service
@@ -257,12 +277,16 @@ spec:
               port: http
             initialDelaySeconds: 25
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             initialDelaySeconds: 50
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 8
           resources:
             requests:
               cpu: 100m
@@ -294,6 +318,8 @@ metadata:
     app.kubernetes.io/part-of: orioneta
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: friendship-service
@@ -348,12 +374,16 @@ spec:
               port: http
             initialDelaySeconds: 25
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             initialDelaySeconds: 50
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 8
           resources:
             requests:
               cpu: 100m
@@ -385,6 +415,8 @@ metadata:
     app.kubernetes.io/part-of: orioneta
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: conversation-service
@@ -439,12 +471,16 @@ spec:
               port: http
             initialDelaySeconds: 25
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             initialDelaySeconds: 50
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 8
           resources:
             requests:
               cpu: 100m
@@ -476,6 +512,8 @@ metadata:
     app.kubernetes.io/part-of: orioneta
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: message-service
@@ -530,12 +568,16 @@ spec:
               port: http
             initialDelaySeconds: 25
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             initialDelaySeconds: 50
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 8
           resources:
             requests:
               cpu: 100m
@@ -567,6 +609,8 @@ metadata:
     app.kubernetes.io/part-of: orioneta
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: notification-service
@@ -621,12 +665,16 @@ spec:
               port: http
             initialDelaySeconds: 25
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             initialDelaySeconds: 50
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 8
           resources:
             requests:
               cpu: 100m
@@ -658,6 +706,8 @@ metadata:
     app.kubernetes.io/part-of: orioneta
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: customization-service
@@ -712,12 +762,16 @@ spec:
               port: http
             initialDelaySeconds: 25
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             initialDelaySeconds: 50
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 8
           resources:
             requests:
               cpu: 100m
@@ -749,6 +803,8 @@ metadata:
     app.kubernetes.io/part-of: orioneta
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: media-service
@@ -799,12 +855,16 @@ spec:
               port: http
             initialDelaySeconds: 25
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             initialDelaySeconds: 50
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 8
           resources:
             requests:
               cpu: 100m
@@ -836,6 +896,8 @@ metadata:
     app.kubernetes.io/part-of: orioneta
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: neta-market-service
@@ -890,12 +952,16 @@ spec:
               port: http
             initialDelaySeconds: 25
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             initialDelaySeconds: 50
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 8
           resources:
             requests:
               cpu: 100m
@@ -927,6 +993,8 @@ metadata:
     app.kubernetes.io/part-of: orioneta
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: realtime-service
@@ -973,12 +1041,16 @@ spec:
               port: http
             initialDelaySeconds: 20
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             initialDelaySeconds: 45
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 8
           resources:
             requests:
               cpu: 100m
@@ -1010,6 +1082,8 @@ metadata:
     app.kubernetes.io/part-of: orioneta
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: moderation-service
@@ -1064,12 +1138,16 @@ spec:
               port: http
             initialDelaySeconds: 25
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             initialDelaySeconds: 50
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 8
           resources:
             requests:
               cpu: 100m
@@ -1101,6 +1179,8 @@ metadata:
     app.kubernetes.io/part-of: orioneta
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: audit-service
@@ -1155,12 +1235,16 @@ spec:
               port: http
             initialDelaySeconds: 25
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             initialDelaySeconds: 50
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 8
           resources:
             requests:
               cpu: 100m

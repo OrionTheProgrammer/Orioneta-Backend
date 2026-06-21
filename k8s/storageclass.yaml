@@ -5,7 +5,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ebs-gp3
     app.kubernetes.io/part-of: orioneta
-provisioner: ebs.csi.aws.com
+provisioner: ebs.csi.eks.amazonaws.com
 volumeBindingMode: WaitForFirstConsumer
 allowVolumeExpansion: true
 parameters:

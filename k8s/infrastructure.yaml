@@ -87,11 +87,19 @@ spec:
             limits:
               memory: 768Mi
       volumes:
-        - name: postgres-data
-          emptyDir: {}
         - name: postgres-init-scripts
           configMap:
             name: postgres-init-scripts
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        storageClassName: ebs-gp3
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 8Gi
 ---
 apiVersion: v1
 kind: Service
@@ -170,9 +178,16 @@ spec:
               memory: 256Mi
             limits:
               memory: 768Mi
-      volumes:
-        - name: rabbitmq-data
-          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: rabbitmq-data
+      spec:
+        storageClassName: ebs-gp3
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 4Gi
 ---
 apiVersion: v1
 kind: Service
@@ -241,9 +256,16 @@ spec:
               memory: 128Mi
             limits:
               memory: 384Mi
-      volumes:
-        - name: redis-data
-          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+      spec:
+        storageClassName: ebs-gp3
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi
 ---
 apiVersion: v1
 kind: Service
@@ -325,9 +347,16 @@ spec:
               memory: 256Mi
             limits:
               memory: 768Mi
-      volumes:
-        - name: minio-data
-          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: minio-data
+      spec:
+        storageClassName: ebs-gp3
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 8Gi
 ---
 apiVersion: v1
 kind: Service
