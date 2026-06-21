@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../k8s
+
+images:
+  - name: docker.io/oriontheprogrammer/orioneta-gateway-service
+    newTag: feature-media-minio-prod
+  - name: docker.io/oriontheprogrammer/orioneta-bff-service
+    newTag: feature-media-minio-prod
+  - name: docker.io/oriontheprogrammer/orioneta-auth-service
+    newTag: feature-media-minio-prod
+  - name: docker.io/oriontheprogrammer/orioneta-user-service
+    newTag: feature-media-minio-prod
+  - name: docker.io/oriontheprogrammer/orioneta-friendship-service
+    newTag: feature-media-minio-prod
+  - name: docker.io/oriontheprogrammer/orioneta-conversation-service
+    newTag: feature-media-minio-prod
+  - name: docker.io/oriontheprogrammer/orioneta-message-service
+    newTag: feature-media-minio-prod
+  - name: docker.io/oriontheprogrammer/orioneta-notification-service
+    newTag: feature-media-minio-prod
+  - name: docker.io/oriontheprogrammer/orioneta-customization-service
+    newTag: feature-media-minio-prod
+  - name: docker.io/oriontheprogrammer/orioneta-media-service
+    newTag: feature-media-minio-prod
+  - name: docker.io/oriontheprogrammer/orioneta-neta-market-service
+    newTag: feature-media-minio-prod
+  - name: docker.io/oriontheprogrammer/orioneta-realtime-service
+    newTag: feature-media-minio-prod
+  - name: docker.io/oriontheprogrammer/orioneta-moderation-service
+    newTag: feature-media-minio-prod
+  - name: docker.io/oriontheprogrammer/orioneta-audit-service
+    newTag: feature-media-minio-prod

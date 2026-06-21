@@ -48,7 +48,7 @@ spec:
             failureThreshold: 8
           resources:
             requests:
-              cpu: 75m
+              cpu: 200m
               memory: 192Mi
             limits:
               memory: 512Mi
@@ -66,6 +66,7 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
 spec:
   type: LoadBalancer
+  loadBalancerClass: eks.amazonaws.com/nlb
   selector:
     app.kubernetes.io/name: gateway-service
   ports:
@@ -123,7 +124,7 @@ spec:
             failureThreshold: 8
           resources:
             requests:
-              cpu: 75m
+              cpu: 200m
               memory: 192Mi
             limits:
               memory: 512Mi
@@ -206,7 +207,7 @@ spec:
             failureThreshold: 8
           resources:
             requests:
-              cpu: 100m
+              cpu: 200m
               memory: 256Mi
             limits:
               memory: 768Mi
@@ -289,7 +290,7 @@ spec:
             failureThreshold: 8
           resources:
             requests:
-              cpu: 100m
+              cpu: 200m
               memory: 256Mi
             limits:
               memory: 768Mi
@@ -386,7 +387,7 @@ spec:
             failureThreshold: 8
           resources:
             requests:
-              cpu: 100m
+              cpu: 200m
               memory: 256Mi
             limits:
               memory: 768Mi
@@ -483,7 +484,7 @@ spec:
             failureThreshold: 8
           resources:
             requests:
-              cpu: 100m
+              cpu: 200m
               memory: 256Mi
             limits:
               memory: 768Mi
@@ -580,7 +581,7 @@ spec:
             failureThreshold: 8
           resources:
             requests:
-              cpu: 100m
+              cpu: 200m
               memory: 256Mi
             limits:
               memory: 768Mi
@@ -677,7 +678,7 @@ spec:
             failureThreshold: 8
           resources:
             requests:
-              cpu: 100m
+              cpu: 200m
               memory: 256Mi
             limits:
               memory: 768Mi
@@ -774,7 +775,7 @@ spec:
             failureThreshold: 8
           resources:
             requests:
-              cpu: 100m
+              cpu: 200m
               memory: 256Mi
             limits:
               memory: 768Mi
@@ -867,7 +868,7 @@ spec:
             failureThreshold: 8
           resources:
             requests:
-              cpu: 100m
+              cpu: 200m
               memory: 256Mi
             limits:
               memory: 768Mi
@@ -964,7 +965,7 @@ spec:
             failureThreshold: 8
           resources:
             requests:
-              cpu: 100m
+              cpu: 200m
               memory: 256Mi
             limits:
               memory: 768Mi
@@ -1053,7 +1054,7 @@ spec:
             failureThreshold: 8
           resources:
             requests:
-              cpu: 100m
+              cpu: 200m
               memory: 256Mi
             limits:
               memory: 768Mi
@@ -1150,7 +1151,7 @@ spec:
             failureThreshold: 8
           resources:
             requests:
-              cpu: 100m
+              cpu: 200m
               memory: 256Mi
             limits:
               memory: 768Mi
@@ -1247,7 +1248,7 @@ spec:
             failureThreshold: 8
           resources:
             requests:
-              cpu: 100m
+              cpu: 200m
               memory: 256Mi
             limits:
               memory: 768Mi

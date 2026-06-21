@@ -126,7 +126,43 @@ kubectl -n orioneta get pods
 kubectl -n orioneta get svc
 ```
 
-## 7. Health checks
+Para el laboratorio AWS desplegado desde una rama feature, usa el overlay que fija el tag publicado por CI:
+
+```bash
+kubectl apply -k deploy/k8s-lab
+```
+
+La base `k8s/` conserva `latest` para despliegues desde `main`.
+
+## 7. Despliegue desde GitHub Actions
+
+El pipeline `.github/workflows/dockerhub-images.yml` publica las imagenes de forma secuencial y despliega en EKS desde `main` o mediante ejecucion manual. Requiere estos Repository Secrets:
+
+```txt
+DOCKERHUB_USERNAME
+DOCKERHUB_TOKEN
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+AWS_SESSION_TOKEN
+AWS_REGION
+EKS_CLUSTER_NAME
+POSTGRES_PASSWORD
+RABBITMQ_PASSWORD
+MINIO_ROOT_PASSWORD
+ORIONETA_JWT_SECRET
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+OAUTH_GITHUB_CLIENT_ID
+OAUTH_GITHUB_CLIENT_SECRET
+```
+
+Las credenciales de AWS Academy son temporales. Cuando expire la sesion del laboratorio se deben renovar los tres secretos `AWS_*`. En una cuenta permanente conviene reemplazarlos por GitHub OIDC y un rol IAM de despliegue.
+
+Los runners hospedados por GitHub necesitan acceso de red al endpoint publico de la API de EKS. La autenticacion y autorizacion siguen protegidas por IAM y los controles de acceso del cluster. Para restringir tambien la red usa un runner propio dentro de la VPC.
+
+El workflow `manual-deploy-eks.yml` permite volver a desplegar una etiqueta ya publicada sin recompilar imagenes.
+
+## 8. Health checks
 
 Los microservicios usan Actuator:
 
@@ -137,7 +173,7 @@ Los microservicios usan Actuator:
 
 Los probes ya estan configurados en `applications.yaml`.
 
-## 8. Orden mental de arranque
+## 9. Orden mental de arranque
 
 Kubernetes no usa `depends_on` como Docker Compose. Los servicios pueden arrancar en paralelo y reiniciarse hasta que PostgreSQL, RabbitMQ, Redis o MinIO esten listos. Eso es normal.
 
