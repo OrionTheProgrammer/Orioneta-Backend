@@ -22,717 +22,256 @@ permissions:
   contents: read
 
 concurrency:
-  group: orioneta-deploy-${{ github.ref }}
+  group: orioneta-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   IMAGE_PREFIX: orioneta
   JAVA_VERSION: "25"
-
   SERVICES: >-
-    gateway-service
-    bff-service
-    auth-service
-    user-service
-    friendship-service
-    conversation-service
-    message-service
-    realtime-service
-    notification-service
-    customization-service
-    media-service
-    neta-market-service
-    moderation-service
+    gateway-service bff-service auth-service user-service friendship-service
+    conversation-service message-service realtime-service notification-service
+    customization-service media-service neta-market-service moderation-service
     audit-service
-
   MVP_SERVICES: >-
-    gateway-service
-    bff-service
-    auth-service
-    user-service
-    friendship-service
-    conversation-service
-    message-service
-    realtime-service
-    media-service
+    gateway-service bff-service auth-service user-service friendship-service
+    conversation-service message-service realtime-service media-service
 
 jobs:
   detect-changes:
-    name: Detect changed services
+    name: Detectar servicios modificados
     runs-on: ubuntu-latest
-
     outputs:
       changed_services: ${{ steps.detect.outputs.changed_services }}
       has_service_changes: ${{ steps.detect.outputs.has_service_changes }}
-      deploy_files_changed: ${{ steps.detect.outputs.deploy_files_changed }}
       should_deploy: ${{ steps.detect.outputs.should_deploy }}
-
     steps:
-      - name: Checkout repository
+      - name: Obtener repositorio
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Detect changed files and services
+      - name: Detectar alcance
         id: detect
         env:
           BUILD_SCOPE: ${{ github.event.inputs.build_scope || 'mvp' }}
         run: |
           set -euo pipefail
 
-          echo "Current ref: ${GITHUB_REF_NAME}"
-          echo "Event: ${GITHUB_EVENT_NAME}"
-          echo "SHA: ${GITHUB_SHA}"
-
-          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] || [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             if [ "${BUILD_SCOPE}" = "full" ]; then
-              echo "Manual/tag execution: building all services"
               changed_services="${SERVICES}"
             else
-              echo "Manual/tag execution: building MVP services"
               changed_services="${MVP_SERVICES}"
             fi
-
-            deploy_files_changed="true"
+            should_deploy="true"
+          elif [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            changed_services="${SERVICES}"
+            should_deploy="false"
           else
             before_sha="${{ github.event.before }}"
-
-            if [ -z "$before_sha" ] || [ "$before_sha" = "0000000000000000000000000000000000000000" ]; then
+            if [ -z "${before_sha}" ] || [ "${before_sha}" = "0000000000000000000000000000000000000000" ]; then
               base_sha="$(git rev-list --max-parents=0 HEAD)"
             else
-              base_sha="$before_sha"
+              base_sha="${before_sha}"
             fi
 
-            echo "Base SHA: $base_sha"
-            echo "Head SHA: $GITHUB_SHA"
-
-            changed_files="$(git diff --name-only "$base_sha" "$GITHUB_SHA" || true)"
-
-            echo "Changed files:"
-            echo "$changed_files"
-
-            deploy_files_changed="false"
-
-            if echo "$changed_files" | grep -Eq '^(docker-compose\.prod\.yml|docker/|\.github/workflows/)'; then
-              deploy_files_changed="true"
-            fi
-
-            build_all="false"
-
-            if echo "$changed_files" | grep -Eq '^(pom\.xml|shared/)'; then
-              build_all="true"
-            fi
-
+            changed_files="$(git diff --name-only "${base_sha}" "${GITHUB_SHA}" || true)"
             changed_services=""
+            should_deploy="false"
 
-            if [ "$build_all" = "true" ]; then
-              echo "Root pom/shared changed: building all MVP services"
-              changed_services="${MVP_SERVICES}"
+            if printf '%s\n' "${changed_files}" | grep -Eq '^(pom\.xml|shared/|k8s/|deploy/)'; then
+              changed_services="${SERVICES}"
             else
-              for service in $SERVICES; do
-                if echo "$changed_files" | grep -Eq "^${service}/"; then
+              for service in ${SERVICES}; do
+                if printf '%s\n' "${changed_files}" | grep -Eq "^${service}/"; then
                   changed_services="${changed_services} ${service}"
                 fi
               done
             fi
 
-            changed_services="$(echo "$changed_services" | xargs || true)"
+            if printf '%s\n' "${changed_files}" | grep -Eq '^(pom\.xml|shared/|k8s/|deploy/|[^/]+-service/)'; then
+              should_deploy="true"
+            fi
           fi
 
-          if [ "$deploy_files_changed" = "true" ] && [ -z "$changed_services" ]; then
-            echo "Deploy files changed without service code changes: building MVP services to ensure required images exist"
-            changed_services="${MVP_SERVICES}"
-          fi
-
-          if [ -n "$changed_services" ]; then
+          changed_services="$(printf '%s' "${changed_services}" | xargs || true)"
+          if [ -n "${changed_services}" ]; then
             has_service_changes="true"
           else
             has_service_changes="false"
           fi
 
-          if [ "$has_service_changes" = "true" ] || [ "$deploy_files_changed" = "true" ]; then
-            should_deploy="true"
-          else
-            should_deploy="false"
-          fi
-
           {
             echo "changed_services=${changed_services}"
             echo "has_service_changes=${has_service_changes}"
-            echo "deploy_files_changed=${deploy_files_changed}"
             echo "should_deploy=${should_deploy}"
-          } >> "$GITHUB_OUTPUT"
+          } >> "${GITHUB_OUTPUT}"
 
-          echo "Changed services: ${changed_services}"
-          echo "Has service changes: ${has_service_changes}"
-          echo "Deploy files changed: ${deploy_files_changed}"
-          echo "Should deploy: ${should_deploy}"
+          echo "Servicios: ${changed_services:-ninguno}"
+          echo "Desplegar: ${should_deploy}"
 
   build-and-publish:
-    name: Build and publish changed images
+    name: Probar y publicar imagenes
     runs-on: ubuntu-latest
     needs: detect-changes
-
     if: ${{ needs.detect-changes.outputs.has_service_changes == 'true' }}
-
-    outputs:
-      image_tag: ${{ steps.tags.outputs.image_tag }}
-
     steps:
-      - name: Checkout repository
+      - name: Obtener repositorio
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Configurar Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
           cache: maven
 
-      - name: Validate Maven project
-        run: |
-          set -euo pipefail
-          mvn -B clean verify
+      - name: Ejecutar pruebas
+        run: mvn -B clean verify
 
-      - name: Set up Docker Buildx
+      - name: Configurar Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to DockerHub
+      - name: Iniciar sesion en Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Resolve image tags
+      - name: Resolver etiquetas
         id: tags
         run: |
           set -euo pipefail
-
-          short_sha="${GITHUB_SHA::12}"
-
-          safe_ref="$(printf '%s' "$GITHUB_REF_NAME" \
-            | tr '[:upper:]' '[:lower:]' \
-            | sed -E 's#[^a-z0-9_.-]+#-#g' \
-            | sed -E 's#^-+|-+$##g')"
-
-          if [ "$GITHUB_REF_NAME" = "main" ]; then
+          safe_ref="$(printf '%s' "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9_.-]+#-#g; s#^-+|-+$##g')"
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
             image_tag="latest"
           else
-            image_tag="$safe_ref"
+            image_tag="${safe_ref}"
           fi
+          echo "image_tag=${image_tag}" >> "${GITHUB_OUTPUT}"
+          echo "short_sha=${GITHUB_SHA::12}" >> "${GITHUB_OUTPUT}"
 
-          {
-            echo "short_sha=${short_sha}"
-            echo "safe_ref=${safe_ref}"
-            echo "image_tag=${image_tag}"
-          } >> "$GITHUB_OUTPUT"
-
-          echo "Image tag: ${image_tag}"
-
-      - name: Build and push changed images
+      - name: Construir y publicar secuencialmente
         env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           CHANGED_SERVICES: ${{ needs.detect-changes.outputs.changed_services }}
-          SHORT_SHA: ${{ steps.tags.outputs.short_sha }}
-          SAFE_REF: ${{ steps.tags.outputs.safe_ref }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           IMAGE_TAG: ${{ steps.tags.outputs.image_tag }}
+          SHORT_SHA: ${{ steps.tags.outputs.short_sha }}
         run: |
           set -euo pipefail
-
-          echo "Changed services to build: ${CHANGED_SERVICES}"
-
-          for service in $CHANGED_SERVICES; do
+          for service in ${CHANGED_SERVICES}; do
             image="${DOCKERHUB_USERNAME}/${IMAGE_PREFIX}-${service}"
-
-            tags=()
-            tags+=(-t "${image}:sha-${SHORT_SHA}")
-            tags+=(-t "${image}:${IMAGE_TAG}")
-
-            if [ "$GITHUB_REF_TYPE" = "branch" ] && [ -n "$SAFE_REF" ] && [ "$SAFE_REF" != "$IMAGE_TAG" ]; then
-              tags+=(-t "${image}:${SAFE_REF}")
-            fi
-
-            if [ "$GITHUB_REF_TYPE" = "tag" ] && [ -n "$SAFE_REF" ]; then
-              tags+=(-t "${image}:${SAFE_REF}")
-            fi
-
-            echo "=================================================="
-            echo "Building image: ${image}"
-            echo "Service: ${service}"
-            echo "Tags: sha-${SHORT_SHA}, ${IMAGE_TAG}"
-            echo "=================================================="
-
             docker buildx build \
               --platform linux/amd64 \
               --push \
-              "${tags[@]}" \
+              -t "${image}:${IMAGE_TAG}" \
+              -t "${image}:sha-${SHORT_SHA}" \
               "./${service}"
           done
 
-  deploy-to-ec2:
-    name: Deploy to EC2
+  deploy-to-eks:
+    name: Desplegar en Amazon EKS
     runs-on: ubuntu-latest
     needs:
       - detect-changes
       - build-and-publish
-
     if: >-
       ${{
         always() &&
         needs.detect-changes.outputs.should_deploy == 'true' &&
-        github.ref_type == 'branch' &&
-        github.ref_name == 'main' &&
+        (github.ref_name == 'main' || github.event_name == 'workflow_dispatch') &&
         (needs.build-and-publish.result == 'success' || needs.build-and-publish.result == 'skipped')
       }}
-
     steps:
-      - name: Checkout repository
+      - name: Obtener repositorio
         uses: actions/checkout@v4
 
-      - name: Resolve deployment image tag
-        id: deploy
+      - name: Configurar credenciales temporales de AWS
+        uses: aws-actions/configure-aws-credentials@v6.1.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Configurar kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Conectar con EKS
         run: |
           set -euo pipefail
+          aws eks update-kubeconfig \
+            --name "${{ secrets.EKS_CLUSTER_NAME }}" \
+            --region "${{ secrets.AWS_REGION }}"
+          kubectl auth can-i get deployments --namespace orioneta
 
-          if [ "$GITHUB_REF_NAME" = "main" ]; then
-            echo "image_tag=latest" >> "$GITHUB_OUTPUT"
-          else
-            safe_tag="$(printf '%s' "$GITHUB_REF_NAME" \
-              | tr '[:upper:]' '[:lower:]' \
-              | sed -E 's#[^a-z0-9_.-]+#-#g' \
-              | sed -E 's#^-+|-+$##g')"
-
-            echo "image_tag=${safe_tag}" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Configure SSH
+      - name: Crear secretos de la aplicacion
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+          MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+          ORIONETA_JWT_SECRET: ${{ secrets.ORIONETA_JWT_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GITHUB_CLIENT_ID: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
+          GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
         run: |
           set -euo pipefail
-
-          install -m 700 -d "$HOME/.ssh"
-          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > "$HOME/.ssh/orioneta-ec2"
-          chmod 600 "$HOME/.ssh/orioneta-ec2"
-
-          ec2_reachable=false
-
-          for attempt in 1 2 3 4 5 6; do
-            echo "Testing SSH TCP connection to EC2. Attempt ${attempt}/6"
-
-            if timeout 20 bash -c "</dev/tcp/${{ secrets.EC2_HOST }}/${{ secrets.EC2_PORT }}"; then
-              ec2_reachable=true
-              break
-            fi
-
-            sleep $((attempt * 10))
-          done
-
-          if [ "$ec2_reachable" != "true" ]; then
-            echo "::error::Could not connect to EC2. Check EC2_HOST, EC2_PORT and Security Group SSH inbound rule."
-            exit 1
-          fi
-
-          for attempt in 1 2 3; do
-            if ssh-keyscan -T 20 -p "${{ secrets.EC2_PORT }}" "${{ secrets.EC2_HOST }}" >> "$HOME/.ssh/known_hosts"; then
-              break
-            fi
-
-            if [ "$attempt" -eq 3 ]; then
-              echo "::error::Could not read EC2 SSH host key."
+          for required in POSTGRES_PASSWORD RABBITMQ_PASSWORD MINIO_ROOT_PASSWORD ORIONETA_JWT_SECRET; do
+            if [ -z "${!required:-}" ]; then
+              echo "::error::Falta configurar el secreto ${required}"
               exit 1
             fi
-
-            sleep $((attempt * 10))
           done
 
-      - name: Prepare Amazon Linux host
-        run: |
-          set -euo pipefail
+          kubectl create namespace orioneta --dry-run=client -o yaml | kubectl apply -f -
+          kubectl -n orioneta create secret generic orioneta-secrets \
+            --from-literal=POSTGRES_USER=orioneta \
+            --from-literal=POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+            --from-literal=RABBITMQ_DEFAULT_USER=orioneta \
+            --from-literal=RABBITMQ_DEFAULT_PASS="${RABBITMQ_PASSWORD}" \
+            --from-literal=MINIO_ROOT_USER=orioneta \
+            --from-literal=MINIO_ROOT_PASSWORD="${MINIO_ROOT_PASSWORD}" \
+            --from-literal=ORIONETA_JWT_ISSUER=orioneta-auth-service \
+            --from-literal=ORIONETA_JWT_SECRET="${ORIONETA_JWT_SECRET}" \
+            --from-literal=GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-dev-google-client-id}" \
+            --from-literal=GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET:-dev-google-client-secret}" \
+            --from-literal=GITHUB_CLIENT_ID="${GITHUB_CLIENT_ID:-dev-github-client-id}" \
+            --from-literal=GITHUB_CLIENT_SECRET="${GITHUB_CLIENT_SECRET:-dev-github-client-secret}" \
+            --dry-run=client -o yaml | kubectl apply -f -
 
-          remote="${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}"
-          port="${{ secrets.EC2_PORT }}"
-          key="$HOME/.ssh/orioneta-ec2"
-
-          ssh -i "$key" -p "$port" \
-            -o BatchMode=yes \
-            -o ConnectTimeout=20 \
-            -o ServerAliveInterval=30 \
-            -o ServerAliveCountMax=10 \
-            "$remote" bash -s <<'REMOTE'
-          set -euo pipefail
-
-          if [ -f /etc/os-release ]; then
-            . /etc/os-release
-            echo "Remote OS: ${PRETTY_NAME:-unknown}"
-          fi
-
-          install_packages() {
-            if command -v dnf >/dev/null 2>&1; then
-              sudo -n dnf install -y "$@"
-            elif command -v yum >/dev/null 2>&1; then
-              sudo -n yum install -y "$@"
-            else
-              echo "No supported package manager found. Expected dnf or yum on Amazon Linux."
-              return 1
-            fi
-          }
-
-          if ! command -v docker >/dev/null 2>&1; then
-            echo "Installing Docker..."
-
-            if command -v amazon-linux-extras >/dev/null 2>&1; then
-              sudo -n amazon-linux-extras install docker -y || install_packages docker
-            else
-              install_packages docker
-            fi
-          fi
-
-          install_packages openssl curl ca-certificates || true
-
-          sudo -n systemctl enable --now docker
-
-          if ! docker compose version >/dev/null 2>&1 && ! sudo -n docker compose version >/dev/null 2>&1; then
-            echo "Installing Docker Compose plugin..."
-
-            install_packages docker-compose-plugin || true
-          fi
-
-          if ! docker compose version >/dev/null 2>&1 && ! sudo -n docker compose version >/dev/null 2>&1; then
-            echo "Installing Docker Compose plugin from GitHub release..."
-
-            install_packages curl ca-certificates || true
-
-            arch="$(uname -m)"
-            case "$arch" in
-              x86_64) compose_arch="x86_64" ;;
-              aarch64|arm64) compose_arch="aarch64" ;;
-              *)
-                echo "Unsupported architecture for Docker Compose plugin: ${arch}"
-                exit 1
-                ;;
-            esac
-
-            sudo -n mkdir -p /usr/local/lib/docker/cli-plugins
-            sudo -n curl -fsSL --retry 5 --retry-delay 5 \
-              "https://github.com/docker/compose/releases/download/v2.32.4/docker-compose-linux-${compose_arch}" \
-              -o /usr/local/lib/docker/cli-plugins/docker-compose
-            sudo -n chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
-          fi
-
-          if docker info >/dev/null 2>&1; then
-            docker_cmd=(docker)
-          elif sudo -n docker info >/dev/null 2>&1; then
-            docker_cmd=(sudo -n docker)
-          else
-            echo "Docker is installed but cannot be used by this SSH user."
-            echo "Use an Amazon Linux user with passwordless sudo, usually ec2-user."
-            exit 1
-          fi
-
-          echo "Docker version:"
-          "${docker_cmd[@]}" --version
-
-          echo "Docker Compose version:"
-          "${docker_cmd[@]}" compose version
-
-          mkdir -p ~/orioneta-backend/docker/postgres/init ~/orioneta-backend/docker/prometheus
-          REMOTE
-
-      - name: Upload deployment files
-        run: |
-          set -euo pipefail
-
-          remote="${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}"
-          port="${{ secrets.EC2_PORT }}"
-          key="$HOME/.ssh/orioneta-ec2"
-
-          ssh -i "$key" -p "$port" -o BatchMode=yes -o ConnectTimeout=20 "$remote" \
-            "mkdir -p ~/orioneta-backend/docker/postgres/init ~/orioneta-backend/docker/prometheus"
-
-          scp -i "$key" -P "$port" -o BatchMode=yes -o ConnectTimeout=20 \
-            docker-compose.prod.yml \
-            "$remote:~/orioneta-backend/docker-compose.prod.yml"
-
-          scp -i "$key" -P "$port" -o BatchMode=yes -o ConnectTimeout=20 \
-            docker/postgres/init/01-create-databases.sql \
-            "$remote:~/orioneta-backend/docker/postgres/init/01-create-databases.sql"
-
-          scp -i "$key" -P "$port" -o BatchMode=yes -o ConnectTimeout=20 \
-            docker/prometheus/prometheus.prod.yml \
-            "$remote:~/orioneta-backend/docker/prometheus/prometheus.prod.yml"
-
-      - name: Prepare remote environment
+      - name: Aplicar manifiestos y etiqueta de imagen
         env:
-          IMAGE_TAG: ${{ steps.deploy.outputs.image_tag }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          BUILD_SCOPE: ${{ github.event.inputs.build_scope || 'full' }}
         run: |
           set -euo pipefail
+          kubectl apply -k k8s
 
-          remote="${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}"
-          port="${{ secrets.EC2_PORT }}"
-          key="$HOME/.ssh/orioneta-ec2"
-
-          ssh -i "$key" -p "$port" -o BatchMode=yes -o ConnectTimeout=20 "$remote" \
-            "DOCKERHUB_USERNAME='$DOCKERHUB_USERNAME' IMAGE_TAG='$IMAGE_TAG' bash -s" <<'REMOTE'
-          set -euo pipefail
-
-          mkdir -p ~/orioneta-backend
-          cd ~/orioneta-backend
-
-          if [ ! -f .env ]; then
-            echo "Creating .env file"
-
-            jwt_secret="$(openssl rand -base64 48)"
-
-            cat > .env <<EOF
-          DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME}
-          IMAGE_TAG=${IMAGE_TAG}
-
-          POSTGRES_USER=orioneta
-          POSTGRES_PASSWORD=orioneta
-
-          RABBITMQ_DEFAULT_USER=orioneta
-          RABBITMQ_DEFAULT_PASS=orioneta
-          COMPOSE_PROFILES=
-          JAVA_TOOL_OPTIONS=-Xms64m -Xmx256m
-
-          ORIONETA_JWT_ISSUER=orioneta-auth-service
-          ORIONETA_JWT_SECRET=${jwt_secret}
-
-          SPRING_PROFILES_ACTIVE=prod
-          EOF
+          safe_ref="$(printf '%s' "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9_.-]+#-#g; s#^-+|-+$##g')"
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            image_tag="latest"
           else
-            if grep -q '^DOCKERHUB_USERNAME=' .env; then
-              sed -i "s#^DOCKERHUB_USERNAME=.*#DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME}#" .env
-            else
-              printf '\nDOCKERHUB_USERNAME=%s\n' "$DOCKERHUB_USERNAME" >> .env
-            fi
-
-            if grep -q '^IMAGE_TAG=' .env; then
-              sed -i "s#^IMAGE_TAG=.*#IMAGE_TAG=${IMAGE_TAG}#" .env
-            else
-              printf 'IMAGE_TAG=%s\n' "$IMAGE_TAG" >> .env
-            fi
+            image_tag="${safe_ref}"
           fi
 
-          echo "Remote environment ready"
-          echo "IMAGE_TAG=${IMAGE_TAG}"
-          REMOTE
-
-      - name: Deploy changed services to EC2
-        env:
-          CHANGED_SERVICES: ${{ needs.detect-changes.outputs.changed_services }}
-          DEPLOY_FILES_CHANGED: ${{ needs.detect-changes.outputs.deploy_files_changed }}
-        run: |
-          set -euo pipefail
-
-          remote="${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}"
-          port="${{ secrets.EC2_PORT }}"
-          key="$HOME/.ssh/orioneta-ec2"
-
-          ssh -i "$key" -p "$port" \
-            -o BatchMode=yes \
-            -o ConnectTimeout=20 \
-            -o ServerAliveInterval=30 \
-            -o ServerAliveCountMax=10 \
-            "$remote" \
-            "DOCKERHUB_USERNAME='${{ secrets.DOCKERHUB_USERNAME }}' DOCKERHUB_TOKEN='${{ secrets.DOCKERHUB_TOKEN }}' CHANGED_SERVICES='$CHANGED_SERVICES' DEPLOY_FILES_CHANGED='$DEPLOY_FILES_CHANGED' bash -s" <<'REMOTE'
-          set -euo pipefail
-
-          echo "=================================================="
-          echo "Starting Orioneta deploy"
-          echo "=================================================="
-
-          if docker info >/dev/null 2>&1; then
-            docker_cmd=(docker)
-          elif sudo -n docker info >/dev/null 2>&1; then
-            docker_cmd=(sudo -n docker)
-          else
-            echo "Docker is not available for current user."
-            echo "Recommended fix:"
-            echo "sudo usermod -aG docker \$USER"
-            echo "Then reconnect SSH."
-            exit 1
+          deploy_services="${SERVICES}"
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] && [ "${BUILD_SCOPE}" = "mvp" ]; then
+            deploy_services="${MVP_SERVICES}"
           fi
 
-          cd ~/orioneta-backend
-
-          export COMPOSE_PARALLEL_LIMIT=1
-          export COMPOSE_PROFILES=media,realtime
-          export DOCKER_CLIENT_TIMEOUT=600
-          export COMPOSE_HTTP_TIMEOUT=600
-
-          echo "Memory:"
-          free -h || true
-
-          echo "Disk:"
-          df -h || true
-
-          echo "Docker:"
-          "${docker_cmd[@]}" --version
-
-          echo "Docker Compose:"
-          "${docker_cmd[@]}" compose version
-
-          echo "Checking compose config..."
-          "${docker_cmd[@]}" compose -f docker-compose.prod.yml config >/dev/null
-
-          retry_docker_login() {
-            for attempt in 1 2 3 4 5; do
-              echo "Login to DockerHub. Attempt ${attempt}/5"
-
-              if printf '%s\n' "$DOCKERHUB_TOKEN" | timeout 90 "${docker_cmd[@]}" login docker.io -u "$DOCKERHUB_USERNAME" --password-stdin; then
-                echo "DockerHub login OK"
-                return 0
-              fi
-
-              if [ "$attempt" -eq 5 ]; then
-                echo "DockerHub login failed after 5 attempts"
-                return 1
-              fi
-
-              sleep $((attempt * 20))
-            done
-          }
-
-          INFRA_SERVICES="postgres rabbitmq redis minio"
-          MVP_APP_SERVICES="auth-service user-service conversation-service message-service friendship-service bff-service gateway-service realtime-service media-service"
-
-          if [ -z "${CHANGED_SERVICES}" ]; then
-            CHANGED_SERVICES=""
-          fi
-
-          retry_pull() {
-            service="$1"
-
-            for attempt in 1 2 3 4 5; do
-              echo "Pulling ${service}. Attempt ${attempt}/5"
-
-              if "${docker_cmd[@]}" compose -f docker-compose.prod.yml pull "$service"; then
-                echo "Pull OK: ${service}"
-                return 0
-              fi
-
-              if [ "$attempt" -eq 5 ]; then
-                echo "Pull failed: ${service}"
-                return 1
-              fi
-
-              sleep $((attempt * 30))
-            done
-          }
-
-          get_running_image_id() {
-            service="$1"
-            container_id="$("${docker_cmd[@]}" compose -f docker-compose.prod.yml ps -q "$service" 2>/dev/null || true)"
-
-            if [ -z "$container_id" ]; then
-              echo ""
-              return 0
-            fi
-
-            "${docker_cmd[@]}" inspect --format='{{.Image}}' "$container_id" 2>/dev/null || true
-          }
-
-          get_local_service_image_id() {
-            service="$1"
-            "${docker_cmd[@]}" compose -f docker-compose.prod.yml images -q "$service" 2>/dev/null | head -n 1 || true
-          }
-
-          ensure_infra() {
-            for service in $INFRA_SERVICES; do
-              echo "Ensuring infra service: ${service}"
-
-              if ! "${docker_cmd[@]}" compose -f docker-compose.prod.yml ps "$service" --status running >/dev/null 2>&1; then
-                retry_pull "$service" || true
-              fi
-
-              "${docker_cmd[@]}" compose -f docker-compose.prod.yml up -d "$service"
-            done
-          }
-
-          update_app_service_if_needed() {
-            service="$1"
-
-            echo "=================================================="
-            echo "Checking service: ${service}"
-            echo "=================================================="
-
-            before_image_id="$(get_running_image_id "$service")"
-
-            if [ -n "$before_image_id" ]; then
-              echo "Running image ID before pull: ${before_image_id}"
-            else
-              echo "Service is not running yet: ${service}"
-            fi
-
-            retry_pull "$service"
-
-            after_image_id="$(get_local_service_image_id "$service")"
-
-            if [ -n "$after_image_id" ]; then
-              echo "Local image ID after pull: ${after_image_id}"
-            else
-              echo "Could not resolve local image ID for ${service}"
-            fi
-
-            if [ "$DEPLOY_FILES_CHANGED" = "true" ]; then
-              echo "Deploy files changed. Recreating/checking ${service} with compose."
-              "${docker_cmd[@]}" compose -f docker-compose.prod.yml up -d --no-deps "$service"
-              return 0
-            fi
-
-            if [ -z "$before_image_id" ]; then
-              echo "Container does not exist. Starting ${service}."
-              "${docker_cmd[@]}" compose -f docker-compose.prod.yml up -d --no-deps "$service"
-              return 0
-            fi
-
-            if [ "$before_image_id" = "$after_image_id" ]; then
-              echo "Image did not change for ${service}. Skipping restart."
-              return 0
-            fi
-
-            echo "Image changed for ${service}. Restarting container."
-            "${docker_cmd[@]}" compose -f docker-compose.prod.yml up -d --no-deps "$service"
-          }
-
-          retry_docker_login
-
-          ensure_infra
-
-          if [ -z "$("${docker_cmd[@]}" compose -f docker-compose.prod.yml ps -q gateway-service 2>/dev/null || true)" ]; then
-            echo "Gateway is not running yet. Deploying the complete MVP app set."
-            CHANGED_SERVICES="$MVP_APP_SERVICES"
-          fi
-
-          if [ -z "$CHANGED_SERVICES" ] && [ "$DEPLOY_FILES_CHANGED" = "true" ]; then
-            echo "No app image changed, but deploy files changed."
-            echo "Applying compose changes to MVP services."
-            CHANGED_SERVICES="$MVP_APP_SERVICES"
-          fi
-
-          for service in $CHANGED_SERVICES; do
-            case " $MVP_APP_SERVICES " in
-              *" $service "*)
-                update_app_service_if_needed "$service"
-                ;;
-              *)
-                echo "Skipping ${service} on this EC2 because it is not part of MVP deployment."
-                ;;
-            esac
+          for service in ${deploy_services}; do
+            kubectl -n orioneta set image \
+              "deployment/${service}" \
+              "${service}=${DOCKERHUB_USERNAME}/${IMAGE_PREFIX}-${service}:${image_tag}"
           done
 
-          echo "Cleaning unused images..."
-          "${docker_cmd[@]}" image prune -f || true
-
-          echo "Final status:"
-          "${docker_cmd[@]}" compose -f docker-compose.prod.yml ps
-
-          echo "=================================================="
-          echo "Deployment finished"
-          echo "=================================================="
-          REMOTE
-
-      - name: Print service URL
+      - name: Esperar disponibilidad
         run: |
-          echo "Gateway URL: http://${{ secrets.EC2_HOST }}:8080"
+          set -euo pipefail
+          for service in ${SERVICES}; do
+            kubectl -n orioneta rollout status "deployment/${service}" --timeout=12m
+          done
+          kubectl -n orioneta get pods
+          kubectl -n orioneta get service gateway-service

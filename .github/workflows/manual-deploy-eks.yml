@@ -1,0 +1,83 @@
+name: Manual deploy Orioneta to EKS
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Etiqueta existente en Docker Hub"
+        required: true
+        default: "latest"
+        type: string
+      deploy_scope:
+        description: "Servicios a desplegar"
+        required: true
+        default: "full"
+        type: choice
+        options:
+          - mvp
+          - full
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orioneta-manual-eks
+  cancel-in-progress: false
+
+env:
+  IMAGE_PREFIX: orioneta
+  SERVICES: >-
+    gateway-service bff-service auth-service user-service friendship-service
+    conversation-service message-service realtime-service notification-service
+    customization-service media-service neta-market-service moderation-service
+    audit-service
+  MVP_SERVICES: >-
+    gateway-service bff-service auth-service user-service friendship-service
+    conversation-service message-service realtime-service media-service
+
+jobs:
+  deploy:
+    name: Aplicar imagenes existentes en EKS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciales temporales de AWS
+        uses: aws-actions/configure-aws-credentials@v6.1.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Configurar kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Conectar y desplegar
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+          DEPLOY_SCOPE: ${{ github.event.inputs.deploy_scope }}
+        run: |
+          set -euo pipefail
+          aws eks update-kubeconfig \
+            --name "${{ secrets.EKS_CLUSTER_NAME }}" \
+            --region "${{ secrets.AWS_REGION }}"
+
+          kubectl apply -k k8s
+
+          deploy_services="${SERVICES}"
+          if [ "${DEPLOY_SCOPE}" = "mvp" ]; then
+            deploy_services="${MVP_SERVICES}"
+          fi
+
+          for service in ${deploy_services}; do
+            kubectl -n orioneta set image \
+              "deployment/${service}" \
+              "${service}=${DOCKERHUB_USERNAME}/${IMAGE_PREFIX}-${service}:${IMAGE_TAG}"
+            kubectl -n orioneta rollout status "deployment/${service}" --timeout=12m
+          done
+
+          kubectl -n orioneta get pods
+          kubectl -n orioneta get service gateway-service
