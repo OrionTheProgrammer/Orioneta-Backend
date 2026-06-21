@@ -98,7 +98,7 @@ kubectl -n orioneta get svc gateway-service
 Si lo aplicas manualmente, usa:
 
 ```txt
-host: orioneta.duckdns.org
+host: orioneta.accesscam.org
 secretName: orioneta-tls
 ingressClassName: nginx
 ```

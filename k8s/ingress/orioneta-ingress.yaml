@@ -13,10 +13,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - orioneta.duckdns.org
+        - orioneta.accesscam.org
       secretName: orioneta-tls
   rules:
-    - host: orioneta.duckdns.org
+    - host: orioneta.accesscam.org
       http:
         paths:
           - path: /

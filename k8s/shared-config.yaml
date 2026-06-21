@@ -27,11 +27,11 @@ data:
   ORIONETA_AUDIT_URL: "http://audit-service:8093"
 
   ORIONETA_SERVICES_USERS: "http://user-service:8083"
-  ORIONETA_MEDIA_PUBLIC_BASE_URL: "https://orioneta.duckdns.org"
-  ORIONETA_PUBLIC_BASE_URL: "https://orioneta.duckdns.org"
-  ORIONETA_CORS_ALLOWED_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:3000,http://orioneta.duckdns.org,https://orioneta.duckdns.org,http://3.82.134.149"
-  ORIONETA_OAUTH2_SUCCESS_REDIRECT_URI: "https://orioneta.duckdns.org/auth/oauth2/callback"
-  ORIONETA_OAUTH2_FAILURE_REDIRECT_URI: "https://orioneta.duckdns.org/auth/oauth2/error"
+  ORIONETA_MEDIA_PUBLIC_BASE_URL: "https://orioneta.accesscam.org"
+  ORIONETA_PUBLIC_BASE_URL: "https://orioneta.accesscam.org"
+  ORIONETA_CORS_ALLOWED_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:3000,http://orioneta.accesscam.org,https://orioneta.accesscam.org,http://3.82.134.149"
+  ORIONETA_OAUTH2_SUCCESS_REDIRECT_URI: "https://orioneta.accesscam.org/auth/oauth2/callback"
+  ORIONETA_OAUTH2_FAILURE_REDIRECT_URI: "https://orioneta.accesscam.org/auth/oauth2/error"
 
   MINIO_ENDPOINT: "http://minio:9000"
   MINIO_BUCKET: "orioneta-media"

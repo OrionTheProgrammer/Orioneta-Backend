@@ -280,7 +280,7 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-orioneta}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-orioneta123}
       MINIO_BUCKET: ${MINIO_BUCKET:-orioneta-media}
-      ORIONETA_MEDIA_PUBLIC_BASE_URL: ${ORIONETA_PUBLIC_BASE_URL:-https://orioneta.duckdns.org}
+      ORIONETA_MEDIA_PUBLIC_BASE_URL: ${ORIONETA_PUBLIC_BASE_URL:-https://orioneta.accesscam.org}
     depends_on:
       postgres:
         condition: service_healthy

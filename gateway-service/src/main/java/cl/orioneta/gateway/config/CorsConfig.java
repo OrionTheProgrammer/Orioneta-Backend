@@ -23,7 +23,7 @@ public class CorsConfig {
     private final List<String> allowedOrigins;
 
     public CorsConfig(
-            @Value("${orioneta.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:3000,http://orioneta.duckdns.org,https://orioneta.duckdns.org,http://3.208.164.144}") List<String> allowedOrigins
+            @Value("${orioneta.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:3000,http://orioneta.accesscam.org,https://orioneta.accesscam.org,http://3.82.134.149}") List<String> allowedOrigins
     ) {
         this.allowedOrigins = allowedOrigins;
     }
