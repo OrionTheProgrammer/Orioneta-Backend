@@ -30,8 +30,8 @@ kubectl -n orioneta describe pod -l app.kubernetes.io/name=media-service
 GitHub Actions conserva los logs de compilacion, pruebas, publicacion y
 rollout. Las ejecuciones verificadas para la entrega son:
 
-- Backend: <https://github.com/OrionTheProgrammer/Orioneta-Backend/actions/runs/27919127855>
-- Frontend: <https://github.com/Panditax727/Orioneta-Frontend/actions/runs/27921845191>
+- Backend: <https://github.com/OrionTheProgrammer/Orioneta-Backend/actions/runs/27922817629>
+- Frontend: <https://github.com/Panditax727/Orioneta-Frontend/actions/runs/27922798798>
 
 ## Metricas
 
