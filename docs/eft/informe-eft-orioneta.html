@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Informe EFT DevOps - Orioneta</title>
+  <style>
+    @page { size: Letter; margin: 2cm; }
+    * { box-sizing: border-box; }
+    body {
+      color: #172033;
+      font-family: "Liberation Sans", Arial, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.5;
+      margin: 0 auto;
+      max-width: 860px;
+    }
+    h1, h2, h3 { color: #32226f; line-height: 1.2; }
+    h1 { font-size: 24pt; margin-top: 0; }
+    h2 {
+      border-bottom: 2px solid #7c3aed;
+      font-size: 17pt;
+      margin-top: 1.4em;
+      padding-bottom: 0.25em;
+    }
+    h3 { font-size: 13pt; margin-top: 1.2em; }
+    p { margin: 0.55em 0; text-align: justify; }
+    a { color: #5b21b6; }
+    ul, ol { margin-top: 0.35em; }
+    li { margin-bottom: 0.25em; }
+    table {
+      border-collapse: collapse;
+      font-size: 9.5pt;
+      margin: 0.8em 0 1.2em;
+      width: 100%;
+    }
+    th {
+      background: #ede9fe;
+      color: #2e1065;
+      font-weight: 700;
+    }
+    th, td { border: 1px solid #a8a1b8; padding: 0.45em 0.55em; vertical-align: top; }
+    code {
+      background: #f1f5f9;
+      border-radius: 3px;
+      font-family: "Liberation Mono", monospace;
+      font-size: 9pt;
+      padding: 0.08em 0.22em;
+    }
+    pre {
+      background: #111827;
+      border-radius: 5px;
+      color: #f8fafc;
+      font-family: "Liberation Mono", monospace;
+      font-size: 8.5pt;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+      padding: 0.8em;
+      white-space: pre-wrap;
+    }
+    img {
+      display: block;
+      height: auto;
+      margin: 0.9em auto 0.4em;
+      max-width: 100%;
+    }
+    .cover {
+      min-height: 930px;
+      padding-top: 100px;
+      text-align: center;
+    }
+    .cover .brand { color: #7c3aed; font-size: 38pt; font-weight: 800; }
+    .cover h1 { font-size: 25pt; margin: 1.8em 0 0.5em; text-align: center; }
+    .cover .meta {
+      border-top: 2px solid #7c3aed;
+      display: inline-block;
+      margin-top: 3.2em;
+      min-width: 560px;
+      padding-top: 1.2em;
+      text-align: left;
+    }
+    .page-break { break-before: page; page-break-before: always; }
+    .caption { color: #5b6475; font-size: 8.5pt; margin-bottom: 1em; text-align: center; }
+    .callout {
+      background: #f5f3ff;
+      border-left: 5px solid #7c3aed;
+      margin: 1em 0;
+      padding: 0.7em 1em;
+    }
+    .success {
+      background: #ecfdf5;
+      border-left-color: #059669;
+    }
+    .warning {
+      background: #fffbeb;
+      border-left-color: #d97706;
+    }
+    .toc li { margin-bottom: 0.35em; }
+    .small { color: #5b6475; font-size: 8.5pt; }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div class="brand">ORIONETA</div>
+    <div>Plataforma de mensajería y colaboración</div>
+    <h1>Evaluación Final Transversal<br>Introducción a Herramientas DevOps</h1>
+    <p style="text-align:center;font-size:14pt">Automatización CI/CD, contenerización y despliegue en Amazon EKS</p>
+    <div class="meta">
+      <p><strong>Asignatura:</strong> ISY1101 - Introducción a Herramientas DevOps</p>
+      <p><strong>Integrantes:</strong> Leandro Pedraza / Juan [COMPLETAR APELLIDO]</p>
+      <p><strong>Docente:</strong> [COMPLETAR]</p>
+      <p><strong>Sección:</strong> [COMPLETAR]</p>
+      <p><strong>Fecha:</strong> 21 de junio de 2026</p>
+      <p><strong>URL:</strong> https://orioneta.accesscam.org</p>
+    </div>
+  </section>
+
+  <section><p style="page-break-before: always;"></p>
+    <h1>Tabla de contenidos</h1>
+    <ol class="toc">
+      <li>Resumen ejecutivo</li>
+      <li>Descripción del producto y alcance</li>
+      <li>Gestión de versiones y arquitectura</li>
+      <li>Método de integración del sistema</li>
+      <li>Contenerización y entorno local</li>
+      <li>Registro y trazabilidad de imágenes</li>
+      <li>Pipeline de integración y entrega continua</li>
+      <li>Infraestructura desplegada en AWS</li>
+      <li>Configuración, secretos e IAM</li>
+      <li>Observabilidad y evidencias</li>
+      <li>Seguridad básica</li>
+      <li>Orquestación y escalabilidad</li>
+      <li>Verificación funcional</li>
+      <li>Conclusiones y mejoras futuras</li>
+      <li>Matriz de cumplimiento de la rúbrica</li>
+      <li>Anexos</li>
+    </ol>
+  </section>
+
+  <section><p style="page-break-before: always;"></p>
+    <h2>1. Resumen ejecutivo</h2>
+    <p>
+      Orioneta es una plataforma web de mensajería privada que integra frontend,
+      backend de microservicios y persistencia relacional. El objetivo DevOps fue
+      automatizar el ciclo completo desde un cambio en la rama
+      <code>main</code> hasta una versión accesible por HTTPS en AWS.
+    </p>
+    <p>
+      La solución utiliza React y Vite en el frontend; Java 25, Spring Boot y
+      Maven en el backend; PostgreSQL como base relacional; RabbitMQ para eventos;
+      Redis para presencia y MinIO para archivos. Todos los componentes se
+      ejecutan en contenedores. El backend se orquesta con Amazon EKS y el
+      frontend se despliega en una instancia EC2 protegida por Caddy.
+    </p>
+    <p>
+      GitHub Actions ejecuta build, pruebas, creación de imágenes, publicación en
+      Docker Hub y despliegue. En la validación final se ejecutaron 68 pruebas
+      backend sin fallos, los 14 Deployments quedaron disponibles, los pods no
+      registraron reinicios y la aplicación respondió correctamente por HTTPS y
+      WebSocket.
+    </p>
+    <div class="callout success">
+      <strong>Resultado:</strong> pipeline automatizado y despliegue funcional en
+      <a href="https://orioneta.accesscam.org">https://orioneta.accesscam.org</a>.
+    </div>
+
+    <h2>2. Descripción del producto y alcance</h2>
+    <p>
+      Orioneta permite registrar usuarios, iniciar sesión localmente o mediante
+      Google/GitHub, administrar perfiles, agregar amistades por friend code,
+      crear chats privados o grupos, enviar texto y multimedia y recibir eventos
+      en tiempo real. El frontend incorpora además llamadas WebRTC,
+      personalización y Neta Market.
+    </p>
+    <p>
+      El alcance de esta entrega no consiste únicamente en demostrar funciones
+      de negocio. Se busca demostrar reproducibilidad, automatización,
+      observabilidad y operación en nube. Por ello, código, infraestructura y
+      documentación se mantienen versionados en repositorios públicos.
+    </p>
+    <table>
+      <tr><th>Repositorio</th><th>Responsabilidad</th><th>Rama productiva</th></tr>
+      <tr>
+        <td><a href="https://github.com/OrionTheProgrammer/Orioneta-Backend">Orioneta-Backend</a></td>
+        <td>Microservicios, Compose, Kubernetes y CI/CD de EKS</td>
+        <td><code>main</code></td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/Panditax727/Orioneta-Frontend">Orioneta-Frontend</a></td>
+        <td>React, Docker/Nginx, Caddy y despliegue EC2</td>
+        <td><code>main</code></td>
+      </tr>
+    </table>
+  </section>
+
+  <section><p style="page-break-before: always;"></p>
+    <h2>3. Gestión de versiones y arquitectura</h2>
+    <h3>3.1 Estrategia Git</h3>
+    <p>
+      Se aplicó GitHub Flow. El trabajo se desarrolló en ramas descriptivas con
+      prefijos <code>feature/</code>, <code>fix/</code> y <code>chore/</code>.
+      Los cambios integrados se fusionaron en <code>main</code>, rama que activa
+      los despliegues. Los mensajes de commit usan ámbito y propósito, por
+      ejemplo <code>fix(k8s): estabilizar despliegues y persistencia en EKS</code>.
+    </p>
+    <p>
+      Esta estrategia mantiene una única rama siempre desplegable, reduce ramas
+      de larga vida y permite asociar cada imagen con el SHA que originó su
+      construcción.
+    </p>
+
+    <h3>3.2 Diagrama de despliegue</h3>
+    <img src="arquitectura-despliegue.png" alt="Arquitectura de despliegue Orioneta" width="650" style="width:17cm;height:auto">
+    <p class="caption">Figura 1. Arquitectura real desplegada en AWS.</p>
+
+    <p>
+      La arquitectura separa el acceso público del plano interno. Caddy recibe
+      HTTPS en EC2, sirve React/Nginx y envía API o WebSocket al Network Load
+      Balancer. Dentro de EKS, solo el Gateway es público; los demás Services son
+      ClusterIP.
+    </p>
+
+    <h2>4. Método de integración del sistema</h2>
+    <h3>4.1 Frontend y backend</h3>
+    <p>
+      El frontend usa rutas same-origin. Las solicitudes a <code>/api/*</code>,
+      <code>/oauth2/*</code> y <code>/ws/*</code> pasan por Caddy hacia el NLB.
+      Este diseño evita exponer URLs internas en el bundle y elimina problemas
+      CORS entre frontend y gateway.
+    </p>
+    <h3>4.2 Gateway y BFF</h3>
+    <p>
+      <code>gateway-service</code> centraliza rutas, CORS y validación de entrada.
+      <code>bff-service</code> compone respuestas adecuadas para el cliente. Los
+      servicios se descubren mediante nombres DNS internos de Kubernetes, por
+      ejemplo <code>http://user-service:8083</code>.
+    </p>
+    <h3>4.3 Persistencia y eventos</h3>
+    <p>
+      PostgreSQL funciona como motor compartido, pero mantiene una base lógica
+      por servicio para evitar acoplamiento de tablas. RabbitMQ desacopla mensajes,
+      notificaciones y realtime. Redis conserva presencia y sesiones activas;
+      MinIO almacena objetos multimedia y PostgreSQL sus metadatos.
+    </p>
+  </section>
+
+  <section><p style="page-break-before: always;"></p>
+    <h2>5. Contenerización y entorno local</h2>
+    <h3>5.1 Backend</h3>
+    <p>
+      Los Dockerfile Java utilizan dos etapas. La primera selecciona el JAR
+      verificado por Maven; la segunda emplea
+      <code>eclipse-temurin:25-jre-alpine</code> y ejecuta con el usuario
+      <code>orioneta</code> sin privilegios. La imagen final no contiene Maven,
+      código fuente ni herramientas de compilación.
+    </p>
+    <pre>FROM alpine:3.22 AS artifact
+ARG JAR_FILE=target/*.jar
+COPY ${JAR_FILE} /artifact/app.jar
+
+FROM eclipse-temurin:25-jre-alpine
+RUN addgroup -S orioneta &amp;&amp; adduser -S -G orioneta orioneta
+COPY --from=artifact --chown=orioneta:orioneta /artifact/app.jar /app/app.jar
+USER orioneta
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]</pre>
+    <p>
+      Cada módulo incluye un <code>.dockerignore</code> que permite únicamente el
+      Dockerfile y el JAR. Esto reduce el contexto, evita filtrar archivos del IDE
+      y mejora el uso de caché.
+    </p>
+
+    <h3>5.2 Frontend</h3>
+    <p>
+      El frontend sí compila dentro de Docker. Node 22 Alpine ejecuta
+      <code>npm ci</code> y <code>npm run build</code>; Nginx Alpine recibe
+      únicamente <code>dist</code>. El contenedor incluye un healthcheck en
+      <code>/health</code>.
+    </p>
+
+    <h3>5.3 Docker Compose</h3>
+    <p>
+      Existen dos modalidades: <code>docker-compose.yml</code> inicia
+      infraestructura para trabajar desde el IDE, mientras
+      <code>docker-compose.prod.yml</code> integra frontend, proxy, todos los
+      microservicios y datos. Los perfiles permiten controlar consumo de memoria.
+    </p>
+    <pre>cp .env.example .env
+docker compose -f docker-compose.prod.yml +  --profile messaging --profile realtime --profile customization +  --profile media --profile market --profile audit --profile observability +  up -d</pre>
+    <p>
+      Caddy publica <code>localhost:5173</code> y mantiene API y WebSocket bajo el
+      mismo origen. Los volúmenes conservan PostgreSQL, RabbitMQ, Redis, MinIO y
+      Grafana.
+    </p>
+  </section>
+
+  <section><p style="page-break-before: always;"></p>
+    <h2>6. Registro y trazabilidad de imágenes</h2>
+    <p>
+      Se eligió Docker Hub porque los dos repositorios ya disponían de integración
+      y las imágenes son públicas para fines académicos. Cada microservicio usa el
+      patrón:
+    </p>
+    <pre>oriontheprogrammer/orioneta-&lt;servicio&gt;:latest
+oriontheprogrammer/orioneta-&lt;servicio&gt;:sha-&lt;12 caracteres&gt;</pre>
+    <p>
+      <code>latest</code> representa el estado desplegable de
+      <code>main</code>. La etiqueta SHA es inmutable y permite regresar a la
+      imagen exacta asociada a un commit. El frontend publica
+      <code>latest</code> y el SHA completo.
+    </p>
+    <p>
+      El login utiliza <code>DOCKERHUB_USERNAME</code> y
+      <code>DOCKERHUB_TOKEN</code> almacenados en GitHub Secrets; el token nunca se
+      guarda en el repositorio.
+    </p>
+
+    <h2>7. Pipeline de integración y entrega continua</h2>
+    <img src="pipeline-cicd.png" alt="Pipeline CI/CD" width="650" style="width:17cm;height:auto">
+    <p class="caption">Figura 2. Etapas comunes de CI/CD.</p>
+
+    <h3>7.1 Pipeline backend</h3>
+    <ol>
+      <li>Detecta los servicios afectados por el commit.</li>
+      <li>Configura Java 25 y caché Maven.</li>
+      <li>Ejecuta <code>mvn -B clean verify</code>.</li>
+      <li>Construye y publica imágenes secuencialmente para no saturar el runner.</li>
+      <li>Configura credenciales temporales AWS.</li>
+      <li>Aplica Kustomize y actualiza las imágenes de los Deployments.</li>
+      <li>Espera el rollout de los 14 servicios.</li>
+    </ol>
+    <img src="evidencias/github-actions-backend.png" alt="GitHub Actions backend exitoso" width="650" style="width:17cm;height:auto">
+    <p class="caption">Figura 3. Pipeline backend exitoso en GitHub Actions.</p>
+
+    <h3>7.2 Pipeline frontend</h3>
+    <p>
+      Construye y publica la imagen, obtiene la IP del runner, crea una regla SSH
+      temporal, copia el Caddyfile, actualiza los contenedores, valida Caddy y
+      <code>/health</code>, y finalmente revoca la regla SSH con
+      <code>always()</code>.
+    </p>
+    <img src="evidencias/github-actions-frontend.png" alt="GitHub Actions frontend exitoso" width="650" style="width:17cm;height:auto">
+    <p class="caption">Figura 4. Pipeline frontend exitoso en GitHub Actions.</p>
+  </section>
+
+  <section><p style="page-break-before: always;"></p>
+    <h2>8. Infraestructura desplegada en AWS</h2>
+    <table>
+      <tr><th>Recurso</th><th>Configuración validada</th><th>Justificación</th></tr>
+      <tr><td>Región</td><td>us-east-1</td><td>Disponibilidad del laboratorio y servicios requeridos.</td></tr>
+      <tr><td>VPC</td><td>10.42.0.0/16</td><td>Espacio suficiente para subredes públicas y privadas.</td></tr>
+      <tr><td>Subredes</td><td>2 públicas + 2 privadas, dos AZ</td><td>Separación de exposición y tolerancia zonal.</td></tr>
+      <tr><td>EC2</td><td>t3.small, Amazon Linux</td><td>Entrega de frontend y TLS con bajo costo.</td></tr>
+      <tr><td>EKS</td><td>orioneta-eks, Kubernetes 1.36</td><td>Orquestación, reconciliación y escalabilidad.</td></tr>
+      <tr><td>NLB</td><td>Internet-facing</td><td>Entrada estable y soporte de conexiones persistentes.</td></tr>
+      <tr><td>EBS gp3</td><td>Volúmenes cifrados</td><td>Persistencia para StatefulSets.</td></tr>
+    </table>
+    <p>
+      EKS utiliza las subredes privadas <code>10.42.128.0/20</code> y
+      <code>10.42.144.0/20</code>. La EC2 se encuentra en la subred pública
+      <code>10.42.0.0/20</code>. El NLB es el único acceso directo al backend.
+    </p>
+
+    <h2>9. Configuración, secretos e IAM</h2>
+    <p>
+      La configuración no sensible está en ConfigMap: perfiles, límites JVM y
+      URLs internas. Los secretos se dividen entre GitHub Secrets y Kubernetes
+      Secrets.
+    </p>
+    <table>
+      <tr><th>Ubicación</th><th>Ejemplos</th><th>Control</th></tr>
+      <tr><td>GitHub Secrets</td><td>AWS, Docker Hub, OAuth, SSH</td><td>Enmascarados en logs y disponibles solo al workflow.</td></tr>
+      <tr><td>Kubernetes Secret</td><td>PostgreSQL, RabbitMQ, MinIO, JWT</td><td>Inyectados como variables; no aparecen en manifiestos Git.</td></tr>
+      <tr><td>ConfigMap</td><td>URLs internas, perfil prod</td><td>Versionado por ser no sensible.</td></tr>
+      <tr><td>.env.example</td><td>Nombres y valores demostrativos</td><td>No contiene credenciales reales.</td></tr>
+    </table>
+    <p>
+      En AWS Academy las credenciales son temporales. El pipeline usa el rol del
+      laboratorio solo durante la ejecución. Para una cuenta permanente, la
+      mejora recomendada es GitHub OIDC con un rol IAM que permita únicamente
+      describir el cluster, autenticarse y actualizar recursos del namespace
+      <code>orioneta</code>.
+    </p>
+  </section>
+
+  <section><p style="page-break-before: always;"></p>
+    <h2>10. Observabilidad y evidencias</h2>
+    <h3>10.1 Salud de Kubernetes</h3>
+    <p>
+      Los 14 Deployments quedaron con una réplica disponible. PostgreSQL,
+      RabbitMQ, Redis y MinIO permanecieron Running y no se observaron reinicios.
+    </p>
+    <img src="evidencias/kubernetes.png" alt="Estado Kubernetes" width="620" style="width:16cm;height:auto">
+    <p class="caption">Figura 5. Estado del namespace posterior al rollout.</p>
+
+    <h3>10.2 Actuator y logs</h3>
+    <p>
+      Cada microservicio expone liveness, readiness, métricas y Prometheus. Los
+      logs siguen el patrón stdout/stderr y se consultan con
+      <code>kubectl logs</code>. Los logs completos de build y deploy permanecen
+      en GitHub Actions.
+    </p>
+
+    <h3>10.3 CloudWatch</h3>
+    <p>
+      CloudWatch confirmó baja utilización de CPU, tráfico de red durante el
+      despliegue y cero fallos de estado en la instancia frontend.
+    </p>
+    <img src="evidencias/cloudwatch.png" alt="Métricas CloudWatch" width="620" style="width:16cm;height:auto">
+    <p class="caption">Figura 6. Resumen de métricas obtenidas mediante AWS CloudWatch.</p>
+
+    <h2>11. Seguridad básica</h2>
+    <ul>
+      <li>HTTPS y certificados automáticos administrados por Caddy.</li>
+      <li>JWT emitido por Orioneta incluso cuando la identidad proviene de OAuth2.</li>
+      <li>Contenedores Java ejecutados sin root sobre imágenes Alpine.</li>
+      <li>Puertos internos no publicados fuera de Kubernetes.</li>
+      <li>SSH limitado temporalmente a la IP del runner.</li>
+      <li>Secretos excluidos de Git y enmascarados en Actions.</li>
+      <li>Validaciones de entrada y separación de autenticación/perfil.</li>
+      <li>Probes y límites de memoria para reducir fallos en cascada.</li>
+    </ul>
+    <div class="callout warning">
+      <strong>Mejora planificada:</strong> integrar Trivy, NetworkPolicy, AWS WAF
+      y rotación automática mediante Secrets Manager antes de una producción
+      comercial.
+    </div>
+  </section>
+
+  <section><p style="page-break-before: always;"></p>
+    <h2>12. Orquestación y escalabilidad</h2>
+    <p>
+      Se eligió EKS en lugar de un conjunto de contenedores administrados
+      manualmente porque Kubernetes mantiene el estado deseado. Si un proceso
+      falla, el pod se reemplaza; si readiness falla, deja de recibir tráfico; si
+      se publica una nueva imagen, el Deployment controla la actualización.
+    </p>
+    <table>
+      <tr><th>Capacidad</th><th>Docker manual</th><th>EKS</th></tr>
+      <tr><td>Recuperación</td><td>Reinicio manual o script</td><td>Reconciliación automática</td></tr>
+      <tr><td>Descubrimiento</td><td>IPs/configuración manual</td><td>Service DNS</td></tr>
+      <tr><td>Escalado</td><td>Crear y conectar contenedores</td><td>Réplicas/HPA</td></tr>
+      <tr><td>Actualización</td><td>Reemplazo imperativo</td><td>Rollout declarativo</td></tr>
+      <tr><td>Salud</td><td>Scripts separados</td><td>Probes integrados</td></tr>
+      <tr><td>Persistencia</td><td>Volúmenes locales</td><td>PVC y EBS</td></tr>
+    </table>
+    <p>
+      El laboratorio mantiene una réplica por servicio para limitar costos, pero
+      los Deployments permiten escalar. El Gateway y los servicios stateless son
+      candidatos directos a HPA. Los componentes stateful requieren además una
+      estrategia de replicación o servicios administrados.
+    </p>
+
+    <h2>13. Verificación funcional</h2>
+    <table>
+      <tr><th>Prueba</th><th>Resultado</th></tr>
+      <tr><td><code>mvn -B clean verify</code></td><td>68 pruebas, 0 fallos, 0 errores</td></tr>
+      <tr><td><code>npm run lint</code></td><td>Correcto</td></tr>
+      <tr><td><code>npm run build</code></td><td>Correcto</td></tr>
+      <tr><td>Frontend HTTPS</td><td>HTTP 200</td></tr>
+      <tr><td>Gateway readiness</td><td><code>{"status":"UP"}</code></td></tr>
+      <tr><td>OAuth providers</td><td>Google y GitHub disponibles</td></tr>
+      <tr><td>WebSocket</td><td>Apertura y cierre correctos por WSS</td></tr>
+      <tr><td>Rollout EKS</td><td>14/14 Deployments disponibles</td></tr>
+    </table>
+    <img src="evidencias/frontend-produccion.png" alt="Frontend Orioneta en producción" width="650" style="width:17cm;height:auto">
+    <p class="caption">Figura 7. Pantalla de acceso servida desde producción.</p>
+  </section>
+
+  <section><p style="page-break-before: always;"></p>
+    <h2>14. Conclusiones y mejoras futuras</h2>
+    <p>
+      El proyecto demuestra un flujo DevOps completo: el mismo commit que supera
+      pruebas produce imágenes trazables y se despliega automáticamente. La
+      separación frontend/EC2 y backend/EKS permite entregar TLS de forma simple
+      sin exponer bases de datos o microservicios.
+    </p>
+    <p>
+      EKS aporta capacidades superiores al despliegue manual, aunque aumenta
+      complejidad y costo. Para un entorno académico, el uso de una réplica y
+      servicios stateful internos es razonable; para producción se migrarían
+      PostgreSQL, RabbitMQ, Redis y archivos a servicios administrados.
+    </p>
+    <p>Prioridades siguientes:</p>
+    <ol>
+      <li>OIDC entre GitHub y AWS, eliminando credenciales temporales almacenadas.</li>
+      <li>Escaneo de imágenes y dependencias dentro del pipeline.</li>
+      <li>Container Insights y logs de aplicaciones en CloudWatch.</li>
+      <li>HPA, PodDisruptionBudget y pruebas de carga.</li>
+      <li>RDS Multi-AZ, S3 y servicios administrados para datos.</li>
+    </ol>
+
+    <h2>15. Matriz de cumplimiento de la rúbrica</h2>
+    <table>
+      <tr><th>Indicador</th><th>Evidencia</th><th>Ubicación</th></tr>
+      <tr><td>IE1 Versiones y arquitectura</td><td>GitHub Flow, commits descriptivos, diagrama completo</td><td>Repositorios y Figura 1</td></tr>
+      <tr><td>IE2 Contenerización</td><td>Dockerfile multietapa, Alpine, non-root, Compose completo</td><td>Sección 5</td></tr>
+      <tr><td>IE3 CI/CD</td><td>Build, test, push y deploy automáticos</td><td>Figuras 2, 3 y 4</td></tr>
+      <tr><td>IE4 EKS/ECS</td><td>EKS activo, NLB, 14 Deployments, PVC EBS</td><td>Secciones 8 y 12</td></tr>
+      <tr><td>IE5 Funcionalidad</td><td>Pruebas, health, OAuth, WebSocket y pods Ready</td><td>Sección 13</td></tr>
+      <tr><td>IE6 Presentación</td><td>PPTX y guion de demostración/defensa</td><td>Carpeta docs/eft</td></tr>
+    </table>
+  </section>
+
+  <section><p style="page-break-before: always;"></p>
+    <h2>16. Anexos</h2>
+    <h3>Anexo A. Comandos de demostración</h3>
+    <pre>git log --oneline --decorate -10
+
+docker compose -f docker-compose.prod.yml config --services
+docker compose -f docker-compose.prod.yml ps
+
+mvn -B clean verify
+npm run lint
+npm run build
+
+kubectl -n orioneta get deployments
+kubectl -n orioneta get pods
+kubectl -n orioneta get services
+
+curl https://orioneta.accesscam.org/
+curl https://orioneta.accesscam.org/actuator/health/readiness</pre>
+
+    <h3>Anexo B. Ejecuciones CI/CD</h3>
+    <ul>
+      <li><a href="https://github.com/OrionTheProgrammer/Orioneta-Backend/actions/runs/27919127855">Pipeline backend exitoso</a></li>
+      <li><a href="https://github.com/Panditax727/Orioneta-Frontend/actions/runs/27921845191">Pipeline frontend exitoso</a></li>
+    </ul>
+
+    <h3>Anexo C. Referencias del repositorio</h3>
+    <ul>
+      <li><code>.github/workflows/dockerhub-images.yml</code></li>
+      <li><code>.github/workflows/manual-deploy-eks.yml</code></li>
+      <li><code>docker-compose.yml</code> y <code>docker-compose.prod.yml</code></li>
+      <li><code>k8s/</code> y <code>deploy/k8s-lab/</code></li>
+      <li><code>docs/seguridad.md</code>, <code>docs/observabilidad.md</code> y <code>docs/pruebas.md</code></li>
+    </ul>
+
+    <p class="small">
+      Documento generado a partir del estado real de los repositorios y del
+      entorno AWS validado el 21 de junio de 2026. No contiene contraseñas,
+      tokens ni llaves privadas.
+    </p>
+  </section>
+</body>
+</html>

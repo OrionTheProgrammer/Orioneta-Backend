@@ -1,0 +1,15 @@
+:80 {
+	encode zstd gzip
+
+	@backend {
+		path /api/* /actuator/* /swagger-ui/* /v3/api-docs* /oauth2/* /login/oauth2/* /ws*
+	}
+
+	handle @backend {
+		reverse_proxy {$BACKEND_UPSTREAM:http://gateway-service:8080}
+	}
+
+	handle {
+		reverse_proxy frontend:80
+	}
+}

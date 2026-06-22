@@ -1,0 +1,38 @@
+digraph OrionetaPipeline {
+  graph [
+    rankdir=LR,
+    bgcolor="white",
+    fontname="DejaVu Sans",
+    fontsize=18,
+    label="Pipeline CI/CD automatizado desde main",
+    labelloc=t,
+    pad=0.25,
+    nodesep=0.45,
+    ranksep=0.7
+  ];
+  node [
+    shape=box,
+    style="rounded,filled",
+    fontname="DejaVu Sans",
+    fontsize=11,
+    color="#334155",
+    fillcolor="#f8fafc",
+    margin="0.16,0.12"
+  ];
+  edge [color="#64748b", penwidth=1.5, arrowsize=0.75];
+
+  push [label="Push a main", fillcolor="#ede9fe", color="#7c3aed"];
+  detect [label="Detectar\nservicios modificados"];
+  test [label="Build y test\nMaven / npm", fillcolor="#dcfce7", color="#16a34a"];
+  image [label="Construir imagen\nDocker"];
+  registry [label="Publicar Docker Hub\nlatest + sha", fillcolor="#dbeafe", color="#0284c7"];
+  auth [label="Autenticar AWS\nGitHub Secrets"];
+  deploy [label="Desplegar\nEKS / EC2", fillcolor="#fef3c7", color="#d97706"];
+  verify [label="Rollout + healthcheck", fillcolor="#dcfce7", color="#16a34a"];
+  logs [shape=note, label="Logs y trazabilidad\nen GitHub Actions", fillcolor="#f1f5f9"];
+
+  push -> detect -> test -> image -> registry -> auth -> deploy -> verify;
+  test -> logs [style=dashed];
+  registry -> logs [style=dashed];
+  verify -> logs [style=dashed];
+}
