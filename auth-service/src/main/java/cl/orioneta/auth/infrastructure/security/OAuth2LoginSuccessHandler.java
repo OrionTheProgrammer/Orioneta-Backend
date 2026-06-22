@@ -14,6 +14,8 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Convierte un login externo exitoso en una sesion interna de Orioneta.
@@ -24,6 +26,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final AuthService authService;
     private final OAuth2ProfileExtractor profileExtractor;
     private final String successRedirectUri;
+    private static final Logger logger = LoggerFactory.getLogger(OAuth2LoginSuccessHandler.class);
 
     public OAuth2LoginSuccessHandler(
             AuthService authService,
@@ -41,11 +44,15 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             HttpServletResponse response,
             Authentication authentication
     ) throws IOException, ServletException {
-        OAuth2AuthenticationToken oauth2Token = (OAuth2AuthenticationToken) authentication;
-        OAuth2Profile profile = profileExtractor.extract(oauth2Token);
-        AuthResponse authResponse = authService.loginWithOAuth2(profile);
-
-        response.sendRedirect(successRedirectUri + "#" + buildFragment(authResponse));
+        try {
+            OAuth2AuthenticationToken oauth2Token = (OAuth2AuthenticationToken) authentication;
+            OAuth2Profile profile = profileExtractor.extract(oauth2Token);
+            AuthResponse authResponse = authService.loginWithOAuth2(profile);
+            response.sendRedirect(successRedirectUri + "#" + buildFragment(authResponse));
+        } catch (Exception e) {
+            logger.error("Error en OAuth2LoginSuccessHandler: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
     private String buildFragment(AuthResponse authResponse) {

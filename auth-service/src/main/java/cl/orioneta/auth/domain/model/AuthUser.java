@@ -221,6 +221,11 @@ public class AuthUser {
         return value.trim();
     }
 
+    public void changePassword(String newPasswordHash) {
+        this.passwordHash = requireText(newPasswordHash, "El hash de password es obligatorio");
+        touch();
+    }
+
     private void touch() {
         updatedAt = LocalDateTime.now();
     }

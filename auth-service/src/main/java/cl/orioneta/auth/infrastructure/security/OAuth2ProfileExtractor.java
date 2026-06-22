@@ -55,12 +55,18 @@ public class OAuth2ProfileExtractor {
         String email = valueOrFallback(attributes, "email", "");
 
         if (email.isBlank()) {
-            email = fetchPrimaryGithubEmail(authentication);
+            try {
+                email = fetchPrimaryGithubEmail(authentication);
+            } catch (Exception e) {
+                // Fallback: usar login como identificador de email
+                String login = valueOrFallback(attributes, "login", "unknown");
+                email = login + "@github.noreply.com";
+            }
         }
 
         return new OAuth2Profile(
                 AuthProvider.GITHUB,
-                requireAttribute(attributes, "id"),
+                String.valueOf(attributes.get("id")),
                 email,
                 valueOrFallback(attributes, "name", valueOrFallback(attributes, "login", "GitHub User")),
                 valueOrFallback(attributes, "avatar_url", "")

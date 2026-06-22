@@ -26,8 +26,11 @@ import org.springframework.stereotype.Component;
 
 /**
  * Emite access tokens JWT y refresh tokens opacos de Orioneta.
+ *
+ * @deprecated Usar {@link JjwtTokenManager} en su lugar para implementación con io.jsonwebtoken
  */
 @Component
+@Deprecated
 public class JwtTokenManager implements TokenManager {
 
     private final SecureRandom secureRandom = new SecureRandom();

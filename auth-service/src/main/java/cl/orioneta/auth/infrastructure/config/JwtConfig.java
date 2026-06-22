@@ -17,7 +17,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
  * Beans para emitir y validar JWT propios de Orioneta.
  */
 @Configuration
-@EnableConfigurationProperties(AuthJwtProperties.class)
+@EnableConfigurationProperties({AuthJwtProperties.class, PasswordResetProperties.class})
 public class JwtConfig {
 
     @Bean

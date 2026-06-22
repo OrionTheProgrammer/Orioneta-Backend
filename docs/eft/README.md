@@ -7,9 +7,10 @@ Transversal de ISY1101.
 
 - `Informe_EFT_Orioneta.docx`: informe Word solicitado.
 - `Informe_EFT_Orioneta.pdf`: copia para lectura y respaldo.
-- `Presentacion_EFT_Orioneta.pptx`: presentacion de 10 a 15 minutos.
+- `Presentacion_EFT_Orioneta.pptx`: apoyo visual para la exposicion.
 - `Presentacion_EFT_Orioneta.pdf`: respaldo visual de las diapositivas.
-- `guion-defensa.md`: recorrido de demostracion y preguntas tecnicas.
+- `guion-defensa.md`: guion completo para 30 minutos, demostracion y defensa
+  tecnica.
 - `informe-eft-orioneta.html`: fuente editable del informe.
 - `arquitectura-despliegue.png`: diagrama de arquitectura.
 - `pipeline-cicd.png`: diagrama CI/CD.

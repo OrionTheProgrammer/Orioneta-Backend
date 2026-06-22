@@ -31,3 +31,33 @@ springdoc:
     path: /swagger-ui.html
   api-docs:
     path: /v3/api-docs
+
+# OAuth2 Configuration para desarrollo local
+# ⚠️ ADVERTENCIA: Estas credenciales son solo para desarrollo local.
+# En producción, usa variables de entorno o secretos management.
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:TU_CLIENT_ID_AQUI}
+            client-secret: ${GOOGLE_CLIENT_SECRET:TU_CLIENT_SECRET_AQUI}
+            scope:
+              - openid
+              - profile
+              - email
+            redirect-uri: http://localhost:8082/login/oauth2/code/google
+          github:
+            client-id: ${GITHUB_CLIENT_ID:TU_CLIENT_ID_AQUI}
+            client-secret: ${GITHUB_CLIENT_SECRET:TU_CLIENT_SECRET_AQUI}
+            scope:
+              - read:user
+              - user:email
+            redirect-uri: http://localhost:8082/login/oauth2/code/github
+
+orioneta:
+  auth:
+    oauth2:
+      success-redirect-uri: http://localhost:5173/auth/oauth2/callback
+      failure-redirect-uri: http://localhost:5173/auth/oauth2/error
