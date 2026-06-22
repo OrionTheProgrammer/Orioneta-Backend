@@ -71,6 +71,32 @@ services:
       timeout: 5s
       retries: 10
 
+  frontend:
+    image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-frontend:${FRONTEND_IMAGE_TAG:-latest}
+    container_name: orioneta-frontend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  edge-proxy:
+    image: caddy:2-alpine
+    container_name: orioneta-edge-proxy
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    environment:
+      BACKEND_UPSTREAM: http://gateway-service:8080
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      frontend:
+        condition: service_healthy
+      gateway-service:
+        condition: service_started
+
   gateway-service:
     image: ${DOCKERHUB_USERNAME:?Define DOCKERHUB_USERNAME}/orioneta-gateway-service:${IMAGE_TAG:-latest}
     container_name: orioneta-gateway-service
