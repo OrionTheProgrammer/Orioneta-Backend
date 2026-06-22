@@ -1,0 +1,78 @@
+digraph OrionetaDeployment {
+  graph [
+    rankdir=LR,
+    bgcolor="white",
+    fontname="DejaVu Sans",
+    fontsize=18,
+    label="Arquitectura de despliegue Orioneta en AWS",
+    labelloc=t,
+    pad=0.25,
+    nodesep=0.45,
+    ranksep=0.85,
+    splines=ortho
+  ];
+  node [
+    shape=box,
+    style="rounded,filled",
+    fontname="DejaVu Sans",
+    fontsize=11,
+    color="#334155",
+    fillcolor="#f8fafc",
+    margin="0.14,0.10"
+  ];
+  edge [color="#64748b", penwidth=1.4, arrowsize=0.7, fontname="DejaVu Sans", fontsize=9];
+
+  user [label="Usuario\nNavegador", fillcolor="#ede9fe", color="#7c3aed"];
+  dynu [label="Dynu DNS\norioneta.accesscam.org", fillcolor="#dbeafe", color="#2563eb"];
+  github [label="GitHub Actions\nCI/CD", fillcolor="#dcfce7", color="#16a34a"];
+  dockerhub [label="Docker Hub\nlatest + sha", fillcolor="#dbeafe", color="#0284c7"];
+
+  subgraph cluster_vpc {
+    label="AWS VPC 10.42.0.0/16 - us-east-1";
+    color="#94a3b8";
+    style="rounded,dashed";
+
+    subgraph cluster_public {
+      label="Subred publica";
+      color="#60a5fa";
+      style="rounded";
+      ec2 [label="EC2 t3.small\nAmazon Linux", fillcolor="#fff7ed", color="#ea580c"];
+      caddy [label="Caddy\nTLS + reverse proxy", fillcolor="#fef3c7", color="#d97706"];
+      frontend [label="React + Nginx\ncontenedor frontend", fillcolor="#e0f2fe", color="#0284c7"];
+      nlb [label="Network Load Balancer\ninternet-facing", fillcolor="#e0e7ff", color="#4f46e5"];
+      ec2 -> caddy;
+      caddy -> frontend [label="HTML/CSS/JS"];
+    }
+
+    subgraph cluster_private {
+      label="Subredes privadas - Amazon EKS 1.36";
+      color="#22c55e";
+      style="rounded";
+      gateway [label="gateway-service\nService LoadBalancer", fillcolor="#dcfce7", color="#16a34a"];
+      bff [label="bff-service", fillcolor="#ecfccb", color="#65a30d"];
+      services [label="12 microservicios de dominio\nAuth, User, Friendship, Conversation,\nMessage, Media, Realtime y otros", fillcolor="#f0fdf4", color="#16a34a"];
+      postgres [shape=cylinder, label="PostgreSQL\n11 bases logicas", fillcolor="#dbeafe", color="#2563eb"];
+      rabbit [shape=cylinder, label="RabbitMQ\neventos", fillcolor="#fef3c7", color="#d97706"];
+      redis [shape=cylinder, label="Redis\npresencia", fillcolor="#fee2e2", color="#dc2626"];
+      minio [shape=cylinder, label="MinIO\nmultimedia", fillcolor="#fce7f3", color="#db2777"];
+
+      gateway -> bff;
+      gateway -> services;
+      bff -> services;
+      services -> postgres;
+      services -> rabbit;
+      services -> redis;
+      services -> minio;
+    }
+  }
+
+  user -> dynu [label="HTTPS / WSS"];
+  dynu -> caddy;
+  caddy -> nlb [label="/api /oauth2 /ws"];
+  nlb -> gateway;
+  github -> dockerhub [label="push imagenes"];
+  dockerhub -> ec2 [label="pull frontend", style=dashed];
+  dockerhub -> gateway [label="rollout EKS", style=dashed];
+  github -> ec2 [label="SSH temporal", style=dashed];
+  github -> gateway [label="kubectl", style=dashed];
+}

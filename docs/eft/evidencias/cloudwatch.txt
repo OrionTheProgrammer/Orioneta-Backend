@@ -1,0 +1,16 @@
+AWS CLOUDWATCH - EC2 FRONTEND
+=============================
+Instancia: i-07cabd7bb6df6de0e
+Tipo: t3.small
+Ventana: ultimas 6 horas al 21-06-2026
+
+CPU promedio minima:          0,16 %
+CPU promedio maxima:          1,13 %
+CPU maxima observada:         3,44 %
+NetworkIn maximo:        11.240.537 bytes
+NetworkOut maximo:          389.451 bytes
+StatusCheckFailed:                  0
+
+Interpretacion:
+La instancia se encuentra saludable y con holgura de CPU.
+El pico de red coincide con la descarga de la nueva imagen.

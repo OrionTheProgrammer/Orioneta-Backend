@@ -1,0 +1,15 @@
+ORIONETA FRONTEND - GITHUB ACTIONS
+==================================
+Workflow: Build and deploy frontend
+Rama: main
+Run: 27921845191
+Estado final: SUCCESS
+
+[OK] Build, lint y publicacion de imagen       22 s
+[OK] Despliegue EC2 y validacion de Caddy      22 s
+
+Imagenes: latest + SHA completo en Docker Hub
+Seguridad: acceso SSH temporal revocado al finalizar
+Healthcheck: contenedor frontend responde /health
+
+https://github.com/Panditax727/Orioneta-Frontend/actions/runs/27921845191

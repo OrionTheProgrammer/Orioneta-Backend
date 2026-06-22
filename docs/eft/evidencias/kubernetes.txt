@@ -1,0 +1,26 @@
+AMAZON EKS - NAMESPACE ORIONETA
+===============================
+Cluster: orioneta-eks
+Version: 1.36
+Estado: ACTIVE
+
+DEPLOYMENTS                         READY
+gateway-service                    1/1
+bff-service                        1/1
+auth-service                       1/1
+user-service                       1/1
+friendship-service                 1/1
+conversation-service               1/1
+message-service                    1/1
+notification-service               1/1
+customization-service              1/1
+media-service                      1/1
+neta-market-service                1/1
+realtime-service                   1/1
+moderation-service                 1/1
+audit-service                      1/1
+
+ESTADO ADICIONAL
+PostgreSQL, RabbitMQ, Redis y MinIO: Running
+Reinicios observados: 0
+Gateway: Network Load Balancer activo

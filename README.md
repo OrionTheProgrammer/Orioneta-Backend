@@ -1,244 +1,205 @@
 # Orioneta Backend
 
-Backend de Orioneta basado en microservicios con Spring Boot, Spring Cloud Gateway, BFF, JPA, RabbitMQ, Redis y modulos compartidos.
+Backend de Orioneta construido como un monorepo Maven de microservicios con
+Spring Boot, Spring Cloud Gateway, PostgreSQL, RabbitMQ, Redis y MinIO.
+
+## Enlaces
+
+- Aplicacion: <https://orioneta.accesscam.org>
+- Backend: <https://github.com/OrionTheProgrammer/Orioneta-Backend>
+- Frontend: <https://github.com/Panditax727/Orioneta-Frontend>
+- Rama de integracion y produccion: `main`
+
+## Arquitectura
+
+```text
+Navegador
+   |
+   | HTTPS / WebSocket
+   v
+EC2 Frontend (Caddy + React/Nginx)
+   |
+   | /api, /oauth2, /ws
+   v
+AWS Network Load Balancer
+   |
+   v
+API Gateway en Amazon EKS
+   |
+   +--> BFF y microservicios Spring Boot
+   +--> PostgreSQL: una base logica por servicio
+   +--> RabbitMQ: eventos asincronos
+   +--> Redis: presencia y sesiones realtime
+   +--> MinIO: archivos y contenido multimedia
+```
+
+Todos los servicios internos de Kubernetes son `ClusterIP`. Solo el Gateway
+se publica mediante un `Service LoadBalancer`. El frontend entrega una unica
+URL HTTPS y Caddy enruta API y WebSocket al balanceador de EKS.
 
 ## Modulos
 
 | Modulo | Puerto | Responsabilidad |
 | --- | ---: | --- |
-| gateway-service | 8080 | Entrada principal y enrutamiento hacia BFF/servicios |
-| bff-service | 8081 | Backend For Frontend para respuestas orientadas al cliente |
-| auth-service | 8082 | Registro, login, JWT y refresh token |
-| user-service | 8083 | Perfil, foto y estado de usuario |
-| friendship-service | 8084 | Amistades, solicitudes, bloqueos y busqueda por friend code |
-| conversation-service | 8085 | Chats, grupos y participantes |
-| message-service | 8086 | Envio, edicion, lectura y eliminacion de mensajes |
-| notification-service | 8087 | Notificaciones internas o push |
-| customization-service | 8088 | Preferencias visuales, temas, fondos y estilos |
-| media-service | 8089 | Archivos, imagenes, audios y documentos |
-| neta-market-service | 8090 | Neta Market para templates visuales |
-| realtime-service | 8091 | WebSocket y distribucion de eventos en tiempo real |
-| moderation-service | 8092 | Revision y aprobacion de contenido subido |
-| audit-service | 8093 | Registro de eventos importantes |
+| gateway-service | 8080 | Entrada publica, CORS, seguridad y enrutamiento |
+| bff-service | 8081 | Respuestas adaptadas al frontend |
+| auth-service | 8082 | Registro, login, OAuth2, JWT y refresh token |
+| user-service | 8083 | Perfil, avatar, friend code y estado |
+| friendship-service | 8084 | Solicitudes, amistades y bloqueos |
+| conversation-service | 8085 | Chats privados, grupos y participantes |
+| message-service | 8086 | Mensajes, estados y eventos |
+| notification-service | 8087 | Notificaciones persistentes |
+| customization-service | 8088 | Preferencias visuales |
+| media-service | 8089 | Metadatos y archivos almacenados en MinIO |
+| neta-market-service | 8090 | Catalogo de templates |
+| realtime-service | 8091 | WebSocket y presencia con Redis |
+| moderation-service | 8092 | Revision de contenido |
+| audit-service | 8093 | Trazabilidad de eventos |
+
+Los modulos `shared-kernel`, `shared-events` y `shared-security` son
+librerias y no aplicaciones ejecutables.
 
 ## Requisitos
 
 - Java 25 LTS
-- Maven 3.9+
-- Docker y Docker Compose
+- Maven 3.9 o superior
+- Docker Engine y Docker Compose v2
 
-## Primeros pasos
+## Desarrollo local
+
+### Solo infraestructura
+
+Este modo permite ejecutar los microservicios desde el IDE:
 
 ```bash
 docker compose up -d
-mvn clean install
+mvn clean verify
+mvn -pl user-service spring-boot:run
 ```
 
-Para levantar un servicio individual:
+`docker-compose.yml` inicia PostgreSQL, RabbitMQ, Redis, MinIO, Prometheus,
+Grafana y SonarQube.
+
+### Plataforma completa en contenedores
+
+`docker-compose.prod.yml` integra frontend, proxy, todos los microservicios y
+la infraestructura. Usa las imagenes publicadas en Docker Hub.
 
 ```bash
-mvn -pl auth-service spring-boot:run
+cp .env.example .env
+docker compose -f docker-compose.prod.yml \
+  --profile messaging \
+  --profile realtime \
+  --profile customization \
+  --profile media \
+  --profile market \
+  --profile audit \
+  --profile observability \
+  up -d
 ```
 
-## Imagenes Docker
+La aplicacion queda disponible en <http://localhost:5173>. El proxy Caddy
+mantiene frontend, REST y WebSocket bajo el mismo origen.
 
-El pipeline `.github/workflows/dockerhub-images.yml` detecta servicios modificados, compila el reactor Maven, ejecuta las pruebas y publica en DockerHub solo las imagenes necesarias. En ejecucion manual o tag construye el conjunto MVP.
+Para revisar el estado:
 
-Secretos requeridos en GitHub Actions:
-
-```txt
-DOCKERHUB_USERNAME
-DOCKERHUB_TOKEN
+```bash
+docker compose -f docker-compose.prod.yml ps
+curl http://localhost:5173/actuator/health/readiness
 ```
 
-Convencion de nombres:
+## Contenedores
 
-```txt
-<DOCKERHUB_USERNAME>/orioneta-auth-service
-<DOCKERHUB_USERNAME>/orioneta-user-service
-<DOCKERHUB_USERNAME>/orioneta-friendship-service
+Los Dockerfile Java separan la seleccion del artefacto y la imagen runtime. La
+imagen final utiliza `eclipse-temurin:25-jre-alpine`, contiene solo el JAR,
+declara el puerto del servicio y ejecuta con el usuario sin privilegios
+`orioneta`. Cada modulo incluye un `.dockerignore` que limita el contexto al
+Dockerfile y al artefacto compilado.
+
+El frontend utiliza un Dockerfile multietapa:
+
+1. Node Alpine instala dependencias y genera `dist`.
+2. Nginx Alpine sirve solo los archivos estaticos.
+
+## Pruebas
+
+```bash
+mvn clean verify
 ```
 
-El pipeline publica tags por SHA corto (`sha-xxxxxxxxxxxx`) y por destino de despliegue. En `main` publica `latest`; en otras ramas usa el nombre normalizado de la rama.
-
-## Despliegue en EC2
-
-El workflow `.github/workflows/dockerhub-images.yml` despliega la pila Docker Compose en una instancia EC2 Amazon Linux despues de publicar correctamente las imagenes Docker. El deploy automatico queda limitado a `main`; en `develop` solo se validan y publican las imagenes necesarias.
-
-Secretos requeridos:
-
-```txt
-EC2_HOST
-EC2_PORT
-EC2_USER
-EC2_SSH_KEY
-DOCKERHUB_USERNAME
-DOCKERHUB_TOKEN
-```
-
-Para Amazon Linux, usa normalmente:
-
-```txt
-EC2_USER=ec2-user
-EC2_PORT=22
-```
-
-La instancia debe permitir SSH desde GitHub Actions en su Security Group. El workflow intenta preparar la maquina de forma idempotente: instala Docker si falta, habilita el servicio `docker`, verifica Docker Compose y usa `sudo docker` cuando el usuario aun no pertenece al grupo `docker`.
-
-El workflow copia estos archivos a `~/orioneta-backend` dentro de la instancia:
-
-```txt
-docker-compose.prod.yml
-docker/postgres/init/01-create-databases.sql
-docker/prometheus/prometheus.prod.yml
-```
-
-Luego aplica un despliegue incremental:
-
-```txt
-1. Asegura servicios de infraestructura.
-2. Descarga imagenes solo de los servicios necesarios.
-3. Recrea solo servicios nuevos, cambiados o afectados por cambios de Compose.
-4. Limpia imagenes sin uso.
-```
-
-Por defecto se despliega el nucleo minimo para una EC2 pequena:
-
-```txt
-gateway-service
-bff-service
-auth-service
-user-service
-friendship-service
-postgres
-rabbitmq
-```
-
-Los servicios mas pesados quedan detras de perfiles Docker Compose. Para activar mas modulos, edita `~/orioneta-backend/.env` en la EC2 y define `COMPOSE_PROFILES`:
-
-```txt
-COMPOSE_PROFILES=messaging,realtime,customization,media,market,audit,observability
-```
-
-Perfiles disponibles:
-
-```txt
-messaging      conversation-service, message-service, notification-service
-realtime       realtime-service
-customization  customization-service
-media          media-service
-market         neta-market-service, moderation-service
-audit          audit-service
-observability  prometheus, grafana
-```
-
-El gateway queda publicado en:
-
-```txt
-http://<EC2_HOST>:8080
-```
-
-Prometheus, Grafana y RabbitMQ Management quedan vinculados a `127.0.0.1` en la EC2 para evitar exponerlos publicamente. Para revisarlos se recomienda usar tunel SSH.
-
-## Pruebas locales con H2 y Swagger
-
-Para probar un microservicio sin PostgreSQL usa el perfil `dev-h2`. Este perfil crea una base H2 en memoria, carga datos de prueba cuando el modulo ya tiene entidades JPA implementadas y habilita la consola H2.
+La compilacion actual ejecuta 68 pruebas sin fallos. JaCoCo genera reportes por
+servicio en `target/site/jacoco`. Los servicios con persistencia tambien
+disponen del perfil `dev-h2` para pruebas rapidas sin PostgreSQL.
 
 Ejemplo:
 
 ```bash
-mvn -pl conversation-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
+mvn -pl user-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
 ```
 
-Swagger queda disponible en:
+## CI/CD
 
-```txt
-http://localhost:<puerto>/swagger-ui.html
-```
+El workflow [dockerhub-images.yml](.github/workflows/dockerhub-images.yml) se
+ejecuta al publicar cambios en `main`:
 
-La consola H2 queda disponible en:
+1. Detecta los microservicios modificados.
+2. Compila el reactor Maven y ejecuta las pruebas.
+3. Construye las imagenes de forma secuencial para controlar el consumo.
+4. Publica `latest` y `sha-<commit>` en Docker Hub.
+5. Autentica contra AWS usando GitHub Secrets.
+6. Aplica Kustomize, actualiza imagenes y espera cada rollout de EKS.
 
-```txt
-http://localhost:<puerto>/h2-console
-```
+El frontend posee un workflow independiente que construye su imagen, la publica
+en Docker Hub y actualiza la instancia EC2 mediante una regla SSH temporal.
 
-Credenciales H2:
+## Kubernetes y AWS
 
-```txt
-usuario: sa
-password: dejar vacio
-```
+Los manifiestos de `k8s/` definen:
 
-URLs JDBC del perfil `dev-h2`:
+- Deployments y Services para 14 microservicios.
+- StatefulSets y volumenes EBS cifrados para PostgreSQL, RabbitMQ, Redis y MinIO.
+- ConfigMap para URLs internas y configuracion no sensible.
+- Secret de Kubernetes creado durante el pipeline.
+- Probes de liveness/readiness y limites de recursos.
+- Network Load Balancer internet-facing para el Gateway.
 
-| Modulo | Puerto | JDBC URL |
-| --- | ---: | --- |
-| auth-service | 8082 | `jdbc:h2:mem:orioneta_auth` |
-| user-service | 8083 | `jdbc:h2:mem:orioneta_users` |
-| friendship-service | 8084 | `jdbc:h2:mem:orioneta_friendships` |
-| conversation-service | 8085 | `jdbc:h2:mem:orioneta_conversations` |
-| message-service | 8086 | `jdbc:h2:mem:orioneta_messages` |
-| notification-service | 8087 | `jdbc:h2:mem:orioneta_notifications` |
-| customization-service | 8088 | `jdbc:h2:mem:orioneta_customization` |
-| media-service | 8089 | `jdbc:h2:mem:orioneta_media` |
-| neta-market-service | 8090 | `jdbc:h2:mem:orioneta_neta_market` |
-| moderation-service | 8092 | `jdbc:h2:mem:orioneta_moderation` |
-| audit-service | 8093 | `jdbc:h2:mem:orioneta_audit` |
-
-Comandos utiles para levantar servicios con datos de prueba:
+Comandos de verificacion:
 
 ```bash
-mvn -pl auth-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
-mvn -pl user-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
-mvn -pl friendship-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
-mvn -pl conversation-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
-mvn -pl message-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
-mvn -pl notification-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
-mvn -pl customization-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
-mvn -pl media-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
-mvn -pl neta-market-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
-mvn -pl moderation-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
-mvn -pl audit-service spring-boot:run -Dspring-boot.run.profiles=dev-h2
+kubectl -n orioneta get deployments
+kubectl -n orioneta get pods
+kubectl -n orioneta get services
 ```
 
-Los IDs de prueba principales son:
+## Seguridad
 
-```txt
-usuario demo 1: 11111111-1111-1111-1111-111111111111
-usuario demo 2: 22222222-2222-2222-2222-222222222222
-conversacion privada: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
-grupo demo: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb
-template aprobado: 60000000-0000-0000-0000-000000000001
-```
+- Secretos fuera de Git mediante GitHub Secrets y Kubernetes Secrets.
+- HTTPS automatico con Caddy.
+- JWT firmado por `auth-service`.
+- Servicios internos no publicados a Internet.
+- Contenedores Java sin usuario root.
+- Imagenes Alpine y contextos Docker reducidos.
+- Security Group del frontend limitado a HTTP/HTTPS; SSH se abre para la IP
+  efimera del runner y se revoca al terminar.
+- Credenciales AWS Academy temporales; en una cuenta permanente se recomienda
+  GitHub OIDC con un rol IAM de minimo privilegio.
 
-Usuario demo de auth-service:
+## Observabilidad
 
-```txt
-email: orion@orioneta.dev
-password: orioneta123
-```
-
-## Estructura
-
-Los microservicios con negocio usan una arquitectura por capas. En los servicios mas completos (`auth-service`, `user-service` y `friendship-service`) la capa de aplicacion se llama `app` para mantener el codigo mas directo mientras el proyecto madura:
-
-- `domain`: modelos, puertos, servicios de dominio, eventos y excepciones.
-- `app`: DTOs, puertos, servicios de aplicacion y mappers.
-- `infrastructure`: controladores, persistencia, mensajeria, clientes externos y configuracion.
-
-Algunos servicios MVP aun usan carpetas `application` porque partieron con casos de uso separados. La regla para futuros cambios es no duplicar estilos dentro del mismo servicio: cada modulo debe tener una sola capa de aplicacion clara.
-
-Los modulos `shared/shared-kernel`, `shared/shared-events` y `shared/shared-security` son librerias reutilizables, no aplicaciones ejecutables.
+- Actuator: `/actuator/health`, `/liveness`, `/readiness` y
+  `/prometheus`.
+- Logs de aplicacion consultables con `kubectl logs`.
+- Prometheus y Grafana disponibles en el Compose local.
+- CloudWatch entrega CPU, red y verificaciones de estado de la EC2.
+- GitHub Actions conserva logs de build, test, publicacion y despliegue.
 
 ## Documentacion
 
-- [Arquitectura](docs/arquitectura.md)
-- [Arquitectura general](docs/arquitectura-general.md)
+- [Arquitectura AWS](docs/arquitectura-aws.md)
 - [Arquitectura backend](docs/arquitectura-backend.md)
 - [Endpoints](docs/endpoints.md)
 - [Eventos RabbitMQ](docs/eventos-rabbitmq.md)
-- [Neta Market](docs/neta-market.md)
 - [Observabilidad](docs/observabilidad.md)
 - [Seguridad](docs/seguridad.md)
-- [Decisiones tecnicas](docs/decisiones-tecnicas.md)
 - [Pruebas](docs/pruebas.md)
+- [Encargo EFT](docs/eft/README.md)
