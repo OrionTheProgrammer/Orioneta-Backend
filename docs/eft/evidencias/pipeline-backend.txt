@@ -2,15 +2,15 @@ ORIONETA BACKEND - GITHUB ACTIONS
 =================================
 Workflow: Build, publish and deploy Orioneta
 Rama: main
-Run: 27919127855
+Run: 27922817629
 Estado final: SUCCESS
 
-[OK] Detectar servicios modificados          4 s
-[OK] Probar y publicar imagenes          4 min 12 s
+[OK] Detectar servicios modificados          5 s
+[OK] Probar y publicar imagenes          3 min 52 s
 [OK] Desplegar en Amazon EKS             3 min 02 s
 
 Pruebas Maven: 68 ejecutadas, 0 fallos, 0 errores
 Imagenes: latest + sha corto en Docker Hub
 Despliegue: kubectl apply + rollout status
 
-https://github.com/OrionTheProgrammer/Orioneta-Backend/actions/runs/27919127855
+https://github.com/OrionTheProgrammer/Orioneta-Backend/actions/runs/27922817629
