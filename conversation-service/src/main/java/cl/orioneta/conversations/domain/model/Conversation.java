@@ -130,6 +130,11 @@ public class Conversation {
         }
     }
 
+    public void removeParticipant(UUID userId) {
+        participants.removeIf(p -> p.getUserId().equals(userId));
+        touch();
+    }
+
     public boolean hasParticipant(UUID userId) {
         return participants.stream().anyMatch(participant -> participant.getUserId().equals(userId));
     }

@@ -40,6 +40,17 @@ public class ConversationPersistenceAdapter implements ConversationRepositoryPor
                 .toList();
     }
 
+    @Override
+    public boolean existsById(UUID id) {
+        return jpaConversationRepository.existsById(id);
+    }
+
+    @Override
+    public void deleteById(UUID id) {
+        jpaConversationRepository.deleteById(id);
+    }
+
+
     private ConversationEntity toEntity(Conversation conversation) {
         return new ConversationEntity(
                 conversation.getId(),

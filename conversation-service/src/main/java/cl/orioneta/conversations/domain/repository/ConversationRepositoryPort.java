@@ -16,4 +16,8 @@ public interface ConversationRepositoryPort {
     Optional<Conversation> findById(UUID id);
 
     List<Conversation> findByParticipantUserId(UUID userId);
+
+    boolean existsById(UUID id);
+
+    void deleteById(UUID id);
 }

@@ -3,22 +3,12 @@ package cl.orioneta.conversations.infrastructure.in.web;
 import cl.orioneta.conversations.application.dto.ConversationResponseDTO;
 import cl.orioneta.conversations.application.dto.CreateConversationRequestDTO;
 import cl.orioneta.conversations.application.mapper.ConversationMapper;
-import cl.orioneta.conversations.application.usecase.AddParticipantUseCase;
-import cl.orioneta.conversations.application.usecase.CreateGroupConversationUseCase;
-import cl.orioneta.conversations.application.usecase.CreatePrivateConversationUseCase;
-import cl.orioneta.conversations.application.usecase.FindConversationByIdUseCase;
-import cl.orioneta.conversations.application.usecase.FindUserConversationsUseCase;
+import cl.orioneta.conversations.application.usecase.*;
 import cl.orioneta.conversations.domain.model.Conversation;
 import cl.orioneta.conversations.domain.model.ConversationType;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -36,6 +26,7 @@ public class ConversationController {
     private final FindUserConversationsUseCase findUserConversationsUseCase;
     private final AddParticipantUseCase addParticipantUseCase;
     private final ConversationMapper conversationMapper;
+    private final RemoveParticipantUseCase removeParticipantUseCase;
 
     public ConversationController(
             CreatePrivateConversationUseCase createPrivateConversationUseCase,
@@ -43,7 +34,8 @@ public class ConversationController {
             FindConversationByIdUseCase findConversationByIdUseCase,
             FindUserConversationsUseCase findUserConversationsUseCase,
             AddParticipantUseCase addParticipantUseCase,
-            ConversationMapper conversationMapper
+            ConversationMapper conversationMapper,
+            RemoveParticipantUseCase removeParticipantUseCase
     ) {
         this.createPrivateConversationUseCase = createPrivateConversationUseCase;
         this.createGroupConversationUseCase = createGroupConversationUseCase;
@@ -51,6 +43,7 @@ public class ConversationController {
         this.findUserConversationsUseCase = findUserConversationsUseCase;
         this.addParticipantUseCase = addParticipantUseCase;
         this.conversationMapper = conversationMapper;
+        this.removeParticipantUseCase = removeParticipantUseCase;
     }
 
     @PostMapping
@@ -79,5 +72,11 @@ public class ConversationController {
     @PostMapping("/{conversationId}/participants/{userId}")
     public ConversationResponseDTO addParticipant(@PathVariable UUID conversationId, @PathVariable UUID userId) {
         return conversationMapper.toResponse(addParticipantUseCase.execute(conversationId, userId));
+    }
+
+    @DeleteMapping("/{conversationId}/participants/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeParticipant(@PathVariable UUID conversationId, @PathVariable UUID userId) {
+        removeParticipantUseCase.execute(conversationId, userId);
     }
 }
