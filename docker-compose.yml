@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:16
     container_name: orioneta-postgres
+    command: postgres -c max_connections=200 -c shared_buffers=256MB
     environment:
       POSTGRES_USER: orioneta
       POSTGRES_PASSWORD: orioneta
@@ -88,7 +89,7 @@ services:
     image: sonarqube:10.7-community
     container_name: orioneta-sonarqube
     ports:
-      - "9000:9000"
+      - "9002:9000"
     volumes:
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_extensions:/opt/sonarqube/extensions
