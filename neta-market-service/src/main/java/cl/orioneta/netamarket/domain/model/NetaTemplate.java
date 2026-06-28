@@ -40,7 +40,7 @@ public class NetaTemplate {
     }
 
     public static NetaTemplate publish(UUID authorUserId, String name, String description, NetaTemplateType type, String previewImageUrl, String fileUrl, String version) {
-        return new NetaTemplate(UUID.randomUUID(), authorUserId, name, description, type, NetaTemplateStatus.APPROVED, previewImageUrl, fileUrl, version, 0, 0, LocalDateTime.now(), LocalDateTime.now());
+        return new NetaTemplate(UUID.randomUUID(), authorUserId, name, description, type, NetaTemplateStatus.PENDING_REVIEW, previewImageUrl, fileUrl, version, 0, 0, LocalDateTime.now(), LocalDateTime.now());
     }
 
     public static NetaTemplate rehydrate(UUID id, UUID authorUserId, String name, String description, NetaTemplateType type, NetaTemplateStatus status, String previewImageUrl, String fileUrl, String version, long downloads, double ratingAverage, LocalDateTime createdAt, LocalDateTime updatedAt) {
