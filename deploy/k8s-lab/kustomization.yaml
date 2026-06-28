@@ -3,33 +3,63 @@ kind: Kustomization
 
 resources:
   - ../../k8s
+  - local-path-provisioner.yaml
+
+patches:
+  - target:
+      kind: StorageClass
+      name: ebs-gp3
+    patch: |-
+      - op: replace
+        path: /provisioner
+        value: rancher.io/local-path
+      - op: remove
+        path: /parameters
+  - target:
+      kind: Service
+      name: gateway-service
+    patch: |-
+      - op: remove
+        path: /spec/loadBalancerClass
+
+replicas:
+  - name: audit-service
+    count: 0
+  - name: customization-service
+    count: 0
+  - name: moderation-service
+    count: 0
+  - name: neta-market-service
+    count: 0
+  - name: notification-service
+    count: 0
 
 images:
   - name: docker.io/oriontheprogrammer/orioneta-gateway-service
-    newTag: feature-media-minio-prod
+    newTag: latest
   - name: docker.io/oriontheprogrammer/orioneta-bff-service
-    newTag: feature-media-minio-prod
+    newTag: latest
   - name: docker.io/oriontheprogrammer/orioneta-auth-service
-    newTag: feature-media-minio-prod
+    newTag: latest
   - name: docker.io/oriontheprogrammer/orioneta-user-service
-    newTag: feature-media-minio-prod
+    newTag: latest
   - name: docker.io/oriontheprogrammer/orioneta-friendship-service
-    newTag: feature-media-minio-prod
+    newTag: latest
   - name: docker.io/oriontheprogrammer/orioneta-conversation-service
-    newTag: feature-media-minio-prod
+    newTag: latest
   - name: docker.io/oriontheprogrammer/orioneta-message-service
-    newTag: feature-media-minio-prod
+    newTag: latest
   - name: docker.io/oriontheprogrammer/orioneta-notification-service
-    newTag: feature-media-minio-prod
+    newTag: latest
   - name: docker.io/oriontheprogrammer/orioneta-customization-service
-    newTag: feature-media-minio-prod
+    newTag: latest
   - name: docker.io/oriontheprogrammer/orioneta-media-service
-    newTag: feature-media-minio-prod
+    newTag: latest
   - name: docker.io/oriontheprogrammer/orioneta-neta-market-service
-    newTag: feature-media-minio-prod
+    newTag: latest
   - name: docker.io/oriontheprogrammer/orioneta-realtime-service
-    newTag: feature-media-minio-prod
+    newTag: latest
   - name: docker.io/oriontheprogrammer/orioneta-moderation-service
-    newTag: feature-media-minio-prod
+    newTag: latest
   - name: docker.io/oriontheprogrammer/orioneta-audit-service
-    newTag: feature-media-minio-prod
+    newTag: latest

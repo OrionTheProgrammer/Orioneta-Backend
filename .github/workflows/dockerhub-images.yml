@@ -266,9 +266,17 @@ jobs:
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           BUILD_SCOPE: ${{ github.event.inputs.build_scope || 'full' }}
+          KUSTOMIZE_PATH: ${{ secrets.K8S_KUSTOMIZE_PATH || 'k8s' }}
         run: |
           set -euo pipefail
-          kubectl apply -k k8s
+
+          # El laboratorio usa nodos pequenos. Mantenemos CloudWatch para logs/metricas,
+          # pero evitamos la inyeccion automatica de agentes OpenTelemetry en cada pod.
+          kubectl delete mutatingwebhookconfiguration \
+            amazon-cloudwatch-observability-mutating-webhook-configuration \
+            --ignore-not-found=true
+
+          kubectl apply -k "${KUSTOMIZE_PATH}"
 
           safe_ref="$(printf '%s' "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9_.-]+#-#g; s#^-+|-+$##g')"
           if [ "${GITHUB_REF_NAME}" = "main" ]; then
@@ -293,6 +301,11 @@ jobs:
         run: |
           set -euo pipefail
           for service in ${SERVICES}; do
+            replicas="$(kubectl -n orioneta get deployment "${service}" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 0)"
+            if [ "${replicas:-0}" = "0" ]; then
+              echo "Servicio ${service} escalado a 0 replicas; se omite espera."
+              continue
+            fi
             kubectl -n orioneta rollout status "deployment/${service}" --timeout=12m
           done
           kubectl -n orioneta get pods
