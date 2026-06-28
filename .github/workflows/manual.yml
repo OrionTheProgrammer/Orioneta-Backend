@@ -48,6 +48,8 @@ env:
     media-service
     bff-service
     gateway-service
+    frontend
+    edge-proxy
 
   FULL_SERVICES: >-
     postgres
@@ -68,6 +70,8 @@ env:
     neta-market-service
     moderation-service
     audit-service
+    frontend
+    edge-proxy
 
 jobs:
   install-from-dockerhub:
@@ -261,6 +265,8 @@ jobs:
           fi
 
           mkdir -p "$HOME/orioneta-backend/docker/postgres/init"
+          mkdir -p "$HOME/orioneta-backend/docker/caddy"
+          mkdir -p "$HOME/orioneta-backend/docker/frontend-nginx"
           mkdir -p "$HOME/orioneta-backend/docker/prometheus"
 
           echo "Memory:"
@@ -281,7 +287,7 @@ jobs:
           key="$HOME/.ssh/orioneta-ec2"
 
           ssh -i "$key" -p "$port" -o BatchMode=yes -o ConnectTimeout=20 "$remote" \
-            "mkdir -p ~/orioneta-backend/docker/postgres/init ~/orioneta-backend/docker/prometheus"
+            "mkdir -p ~/orioneta-backend/docker/postgres/init ~/orioneta-backend/docker/prometheus ~/orioneta-backend/docker/caddy ~/orioneta-backend/docker/frontend-nginx"
 
           scp -i "$key" -P "$port" -o BatchMode=yes -o ConnectTimeout=20 \
             docker-compose.prod.yml \
@@ -291,6 +297,18 @@ jobs:
             scp -i "$key" -P "$port" -o BatchMode=yes -o ConnectTimeout=20 \
               docker/postgres/init/01-create-databases.sql \
               "$remote:~/orioneta-backend/docker/postgres/init/01-create-databases.sql"
+          fi
+
+          if [ -f docker/caddy/Caddyfile ]; then
+            scp -i "$key" -P "$port" -o BatchMode=yes -o ConnectTimeout=20 \
+              docker/caddy/Caddyfile \
+              "$remote:~/orioneta-backend/docker/caddy/Caddyfile"
+          fi
+
+          if [ -f docker/frontend-nginx/default.conf ]; then
+            scp -i "$key" -P "$port" -o BatchMode=yes -o ConnectTimeout=20 \
+              docker/frontend-nginx/default.conf \
+              "$remote:~/orioneta-backend/docker/frontend-nginx/default.conf"
           fi
 
           if [ -f docker/prometheus/prometheus.prod.yml ]; then
@@ -458,3 +476,4 @@ jobs:
         run: |
           echo "EC2 Gateway URL: http://${{ secrets.EC2_HOST }}:8080"
           echo "EC2 Swagger URL: http://${{ secrets.EC2_HOST }}:8080/swagger-ui/index.html"
+          echo "EC2 Frontend URL: http://${{ secrets.EC2_HOST }}:5173"
