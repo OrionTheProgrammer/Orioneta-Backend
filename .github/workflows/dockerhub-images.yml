@@ -197,15 +197,36 @@ jobs:
       - name: Configurar kubectl
         uses: azure/setup-kubectl@v5
 
-      - name: Conectar con EKS
+      - name: Conectar con EKS si existe
+        id: eks
         run: |
           set -euo pipefail
+
+          cluster_name="${{ secrets.EKS_CLUSTER_NAME }}"
+
+          if [ -z "${cluster_name}" ]; then
+            echo "::warning::No se configuro EKS_CLUSTER_NAME. Se omite el despliegue a EKS."
+            echo "available=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          if ! aws eks describe-cluster \
+            --name "${cluster_name}" \
+            --region "${{ secrets.AWS_REGION }}" >/tmp/orioneta-eks-cluster.json 2>/tmp/orioneta-eks-error.log; then
+            echo "::warning::El cluster EKS '${cluster_name}' no existe o no esta disponible en esta cuenta/laboratorio. Se omite el despliegue a EKS."
+            cat /tmp/orioneta-eks-error.log
+            echo "available=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
           aws eks update-kubeconfig \
-            --name "${{ secrets.EKS_CLUSTER_NAME }}" \
+            --name "${cluster_name}" \
             --region "${{ secrets.AWS_REGION }}"
           kubectl auth can-i get deployments --namespace orioneta
+          echo "available=true" >> "${GITHUB_OUTPUT}"
 
       - name: Crear secretos de la aplicacion
+        if: ${{ steps.eks.outputs.available == 'true' }}
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
@@ -241,6 +262,7 @@ jobs:
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Aplicar manifiestos y etiqueta de imagen
+        if: ${{ steps.eks.outputs.available == 'true' }}
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           BUILD_SCOPE: ${{ github.event.inputs.build_scope || 'full' }}
@@ -267,6 +289,7 @@ jobs:
           done
 
       - name: Esperar disponibilidad
+        if: ${{ steps.eks.outputs.available == 'true' }}
         run: |
           set -euo pipefail
           for service in ${SERVICES}; do
