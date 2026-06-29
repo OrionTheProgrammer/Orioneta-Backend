@@ -1,0 +1,490 @@
+name: Configure CloudWatch observability
+
+on:
+  workflow_dispatch:
+    inputs:
+      configure_eks:
+        description: "Configurar observabilidad del backend en EKS"
+        required: true
+        default: true
+        type: boolean
+      configure_frontend_ec2:
+        description: "Configurar agente CloudWatch en la EC2 del frontend"
+        required: true
+        default: true
+        type: boolean
+      create_dashboard:
+        description: "Crear dashboard y alarmas"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orioneta-cloudwatch
+  cancel-in-progress: false
+
+env:
+  ORIONETA_NAMESPACE: orioneta
+  DASHBOARD_NAME: Orioneta-Beta-Observability
+  FRONTEND_ROLE_NAME: orioneta-frontend-cloudwatch-role
+  FRONTEND_INSTANCE_PROFILE_NAME: orioneta-frontend-cloudwatch-profile
+
+jobs:
+  configure:
+    name: CloudWatch para Orioneta
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Obtener repositorio
+        uses: actions/checkout@v7
+
+      - name: Configurar credenciales temporales de AWS
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Configurar kubectl
+        uses: azure/setup-kubectl@v5
+
+      - name: Resolver recursos
+        id: resources
+        env:
+          EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          set -euo pipefail
+
+          account_id="$(aws sts get-caller-identity --query Account --output text)"
+          region="${AWS_REGION}"
+          frontend_instance_id=""
+          frontend_lookup="${EC2_HOST:-}"
+
+          if [ -n "${EC2_HOST:-}" ]; then
+            if ! printf '%s' "${EC2_HOST}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then
+              frontend_lookup="$(getent ahostsv4 "${EC2_HOST}" | awk '{print $1; exit}' || true)"
+            fi
+            frontend_lookup="${frontend_lookup:-${EC2_HOST}}"
+
+            frontend_instance_id="$(aws ec2 describe-instances \
+              --filters "Name=ip-address,Values=${frontend_lookup}" "Name=instance-state-name,Values=pending,running,stopped" \
+              --query 'Reservations[].Instances[].InstanceId' \
+              --output text 2>/dev/null | awk '{print $1}' || true)"
+          fi
+
+          {
+            echo "account_id=${account_id}"
+            echo "region=${region}"
+            echo "cluster_name=${EKS_CLUSTER_NAME}"
+            echo "frontend_instance_id=${frontend_instance_id}"
+          } >> "${GITHUB_OUTPUT}"
+
+          echo "Cuenta AWS: ${account_id}"
+          echo "Region: ${region}"
+          echo "Cluster EKS: ${EKS_CLUSTER_NAME:-no configurado}"
+          echo "Frontend host resuelto: ${frontend_lookup:-no configurado}"
+          echo "Frontend EC2: ${frontend_instance_id:-no resuelto por EC2_HOST}"
+
+      - name: Configurar Container Insights en EKS
+        if: ${{ github.event.inputs.configure_eks == 'true' && steps.resources.outputs.cluster_name != '' }}
+        id: eks_observability
+        env:
+          CLUSTER_NAME: ${{ steps.resources.outputs.cluster_name }}
+        run: |
+          set -euo pipefail
+
+          aws eks describe-cluster --name "${CLUSTER_NAME}" --region "${AWS_REGION}" >/dev/null
+          aws eks update-kubeconfig --name "${CLUSTER_NAME}" --region "${AWS_REGION}"
+
+          set +e
+          aws eks describe-addon \
+            --cluster-name "${CLUSTER_NAME}" \
+            --addon-name amazon-cloudwatch-observability \
+            --region "${AWS_REGION}" >/tmp/cw-addon.json 2>/tmp/cw-addon-error.log
+          addon_exists=$?
+          set -e
+
+          if [ "${addon_exists}" -eq 0 ]; then
+            echo "Actualizando add-on amazon-cloudwatch-observability..."
+            aws eks update-addon \
+              --cluster-name "${CLUSTER_NAME}" \
+              --addon-name amazon-cloudwatch-observability \
+              --resolve-conflicts OVERWRITE \
+              --region "${AWS_REGION}" || true
+          else
+            echo "Creando add-on amazon-cloudwatch-observability..."
+            if ! aws eks create-addon \
+              --cluster-name "${CLUSTER_NAME}" \
+              --addon-name amazon-cloudwatch-observability \
+              --resolve-conflicts OVERWRITE \
+              --region "${AWS_REGION}"; then
+              echo "::warning::No se pudo crear el add-on de CloudWatch. Revisa permisos IAM del laboratorio."
+              cat /tmp/cw-addon-error.log || true
+              echo "status=warning" >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+          fi
+
+          aws eks wait addon-active \
+            --cluster-name "${CLUSTER_NAME}" \
+            --addon-name amazon-cloudwatch-observability \
+            --region "${AWS_REGION}" || true
+
+          # En el laboratorio usamos nodos pequenos. Dejamos metricas/logs, pero
+          # quitamos la inyeccion automatica de OpenTelemetry en todos los pods.
+          kubectl delete mutatingwebhookconfiguration \
+            amazon-cloudwatch-observability-mutating-webhook-configuration \
+            --ignore-not-found=true || true
+
+          kubectl get namespace amazon-cloudwatch || true
+          kubectl -n amazon-cloudwatch get pods -o wide || true
+          kubectl -n "${ORIONETA_NAMESPACE}" get pods -o wide || true
+
+          echo "status=ok" >> "${GITHUB_OUTPUT}"
+
+      - name: Preparar rol IAM para agente del frontend
+        if: ${{ github.event.inputs.configure_frontend_ec2 == 'true' && steps.resources.outputs.frontend_instance_id != '' }}
+        id: frontend_iam
+        env:
+          INSTANCE_ID: ${{ steps.resources.outputs.frontend_instance_id }}
+        run: |
+          set -euo pipefail
+
+          current_profile="$(aws ec2 describe-instances \
+            --instance-ids "${INSTANCE_ID}" \
+            --query 'Reservations[0].Instances[0].IamInstanceProfile.Arn' \
+            --output text 2>/dev/null || true)"
+
+          if [ -n "${current_profile}" ] && [ "${current_profile}" != "None" ]; then
+            echo "La instancia ya tiene instance profile: ${current_profile}"
+            echo "agent_ready=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          trust_policy="$(mktemp)"
+          cat > "${trust_policy}" <<'JSON'
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Principal": {
+                  "Service": "ec2.amazonaws.com"
+                },
+                "Action": "sts:AssumeRole"
+              }
+            ]
+          }
+          JSON
+
+          if ! aws iam get-role --role-name "${FRONTEND_ROLE_NAME}" >/dev/null 2>&1; then
+            if ! aws iam create-role \
+              --role-name "${FRONTEND_ROLE_NAME}" \
+              --assume-role-policy-document "file://${trust_policy}"; then
+              echo "::warning::No se pudo crear rol IAM para CloudWatch Agent. Se usaran metricas EC2 nativas."
+              echo "agent_ready=false" >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+          fi
+
+          aws iam attach-role-policy \
+            --role-name "${FRONTEND_ROLE_NAME}" \
+            --policy-arn arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy || true
+
+          if ! aws iam get-instance-profile --instance-profile-name "${FRONTEND_INSTANCE_PROFILE_NAME}" >/dev/null 2>&1; then
+            aws iam create-instance-profile \
+              --instance-profile-name "${FRONTEND_INSTANCE_PROFILE_NAME}" || true
+            sleep 8
+          fi
+
+          aws iam add-role-to-instance-profile \
+            --instance-profile-name "${FRONTEND_INSTANCE_PROFILE_NAME}" \
+            --role-name "${FRONTEND_ROLE_NAME}" || true
+
+          if ! aws ec2 associate-iam-instance-profile \
+            --instance-id "${INSTANCE_ID}" \
+            --iam-instance-profile "Name=${FRONTEND_INSTANCE_PROFILE_NAME}"; then
+            echo "::warning::No se pudo asociar instance profile a la EC2. Se usaran metricas EC2 nativas."
+            echo "agent_ready=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          echo "agent_ready=true" >> "${GITHUB_OUTPUT}"
+
+      - name: Permitir SSH temporal desde el runner
+        if: ${{ github.event.inputs.configure_frontend_ec2 == 'true' && steps.resources.outputs.frontend_instance_id != '' && steps.frontend_iam.outputs.agent_ready == 'true' }}
+        id: ssh_access
+        env:
+          EC2_SECURITY_GROUP_ID: ${{ secrets.EC2_SECURITY_GROUP_ID }}
+          EC2_PORT: ${{ secrets.EC2_PORT }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${EC2_SECURITY_GROUP_ID:-}" ]; then
+            echo "::warning::No existe EC2_SECURITY_GROUP_ID. Se intentara SSH sin abrir regla temporal."
+            echo "cidr=" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          runner_ip="$(curl --fail --silent --show-error https://checkip.amazonaws.com | tr -d '[:space:]')"
+          cidr="${runner_ip}/32"
+          echo "cidr=${cidr}" >> "${GITHUB_OUTPUT}"
+
+          aws ec2 authorize-security-group-ingress \
+            --group-id "${EC2_SECURITY_GROUP_ID}" \
+            --protocol tcp \
+            --port "${EC2_PORT}" \
+            --cidr "${cidr}" || true
+
+      - name: Crear log groups de Orioneta
+        if: ${{ github.event.inputs.create_dashboard == 'true' }}
+        run: |
+          set -euo pipefail
+
+          for group in \
+            "/orioneta/frontend/system" \
+            "/orioneta/frontend/docker" \
+            "/aws/containerinsights/${{ steps.resources.outputs.cluster_name }}/application" \
+            "/aws/containerinsights/${{ steps.resources.outputs.cluster_name }}/dataplane" \
+            "/aws/containerinsights/${{ steps.resources.outputs.cluster_name }}/host" \
+            "/aws/containerinsights/${{ steps.resources.outputs.cluster_name }}/performance"; do
+            if [ -n "${group}" ] && [ "${group}" != "/aws/containerinsights//application" ]; then
+              aws logs create-log-group --log-group-name "${group}" 2>/dev/null || true
+              aws logs put-retention-policy --log-group-name "${group}" --retention-in-days 14 2>/dev/null || true
+            fi
+          done
+
+      - name: Instalar CloudWatch Agent en frontend
+        if: ${{ github.event.inputs.configure_frontend_ec2 == 'true' && steps.resources.outputs.frontend_instance_id != '' && steps.frontend_iam.outputs.agent_ready == 'true' }}
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_PORT: ${{ secrets.EC2_PORT }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          set -euo pipefail
+
+          install -m 700 -d "${HOME}/.ssh"
+          printf '%s\n' "${EC2_SSH_KEY}" > "${HOME}/.ssh/orioneta-frontend"
+          chmod 600 "${HOME}/.ssh/orioneta-frontend"
+          ssh-keyscan -T 20 -p "${EC2_PORT}" "${EC2_HOST}" >> "${HOME}/.ssh/known_hosts"
+
+          ssh -i "${HOME}/.ssh/orioneta-frontend" \
+            -p "${EC2_PORT}" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=20 \
+            "${EC2_USER}@${EC2_HOST}" bash -s <<'REMOTE'
+          set -euo pipefail
+
+          if command -v dnf >/dev/null 2>&1; then
+            sudo -n dnf install -y amazon-cloudwatch-agent || true
+          elif command -v yum >/dev/null 2>&1; then
+            sudo -n yum install -y amazon-cloudwatch-agent || true
+          elif command -v apt >/dev/null 2>&1; then
+            wget -q https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb -O /tmp/amazon-cloudwatch-agent.deb
+            sudo -n dpkg -i /tmp/amazon-cloudwatch-agent.deb || sudo -n apt-get install -f -y
+          fi
+
+          sudo -n mkdir -p /opt/aws/amazon-cloudwatch-agent/etc
+
+          sudo -n tee /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json >/dev/null <<'JSON'
+          {
+            "agent": {
+              "metrics_collection_interval": 60,
+              "run_as_user": "root"
+            },
+            "metrics": {
+              "namespace": "Orioneta/Frontend",
+              "append_dimensions": {
+                "InstanceId": "${aws:InstanceId}",
+                "InstanceType": "${aws:InstanceType}"
+              },
+              "metrics_collected": {
+                "cpu": {
+                  "measurement": [
+                    "cpu_usage_idle",
+                    "cpu_usage_iowait",
+                    "cpu_usage_system",
+                    "cpu_usage_user"
+                  ],
+                  "metrics_collection_interval": 60,
+                  "totalcpu": true
+                },
+                "disk": {
+                  "measurement": [
+                    "used_percent"
+                  ],
+                  "metrics_collection_interval": 60,
+                  "resources": [
+                    "/"
+                  ]
+                },
+                "mem": {
+                  "measurement": [
+                    "mem_used_percent"
+                  ],
+                  "metrics_collection_interval": 60
+                },
+                "net": {
+                  "measurement": [
+                    "bytes_sent",
+                    "bytes_recv",
+                    "packets_sent",
+                    "packets_recv"
+                  ],
+                  "metrics_collection_interval": 60,
+                  "resources": [
+                    "*"
+                  ]
+                }
+              }
+            },
+            "logs": {
+              "logs_collected": {
+                "files": {
+                  "collect_list": [
+                    {
+                      "file_path": "/var/log/messages",
+                      "log_group_name": "/orioneta/frontend/system",
+                      "log_stream_name": "{instance_id}"
+                    },
+                    {
+                      "file_path": "/var/lib/docker/containers/*/*.log",
+                      "log_group_name": "/orioneta/frontend/docker",
+                      "log_stream_name": "{instance_id}/{container_id}"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+          JSON
+
+          sudo -n /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+            -a fetch-config \
+            -m ec2 \
+            -s \
+            -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+
+          sudo -n systemctl status amazon-cloudwatch-agent --no-pager || true
+          REMOTE
+
+      - name: Revocar SSH temporal del runner
+        if: ${{ always() && steps.ssh_access.outputs.cidr != '' }}
+        env:
+          EC2_SECURITY_GROUP_ID: ${{ secrets.EC2_SECURITY_GROUP_ID }}
+          EC2_PORT: ${{ secrets.EC2_PORT }}
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id "${EC2_SECURITY_GROUP_ID}" \
+            --protocol tcp \
+            --port "${EC2_PORT}" \
+            --cidr "${{ steps.ssh_access.outputs.cidr }}" || true
+
+      - name: Crear dashboard y alarmas CloudWatch
+        if: ${{ github.event.inputs.create_dashboard == 'true' }}
+        env:
+          ACCOUNT_ID: ${{ steps.resources.outputs.account_id }}
+          CLUSTER_NAME: ${{ steps.resources.outputs.cluster_name }}
+          FRONTEND_INSTANCE_ID: ${{ steps.resources.outputs.frontend_instance_id }}
+        run: |
+          set -euo pipefail
+
+          python3 scripts/cloudwatch/build_orioneta_dashboard.py \
+            --dashboard-name "${DASHBOARD_NAME}" \
+            --region "${AWS_REGION}" \
+            --cluster-name "${CLUSTER_NAME}" \
+            --namespace "${ORIONETA_NAMESPACE}" \
+            --frontend-instance-id "${FRONTEND_INSTANCE_ID}" \
+            --output /tmp/orioneta-dashboard.json
+
+          aws cloudwatch put-dashboard \
+            --dashboard-name "${DASHBOARD_NAME}" \
+            --dashboard-body "file:///tmp/orioneta-dashboard.json"
+
+          if [ -n "${FRONTEND_INSTANCE_ID}" ]; then
+            aws cloudwatch put-metric-alarm \
+              --alarm-name "Orioneta-Frontend-EC2-CPU-Alta" \
+              --alarm-description "CPU de la EC2 del frontend sobre 80% durante 5 minutos." \
+              --namespace AWS/EC2 \
+              --metric-name CPUUtilization \
+              --dimensions "Name=InstanceId,Value=${FRONTEND_INSTANCE_ID}" \
+              --statistic Average \
+              --period 60 \
+              --evaluation-periods 5 \
+              --threshold 80 \
+              --comparison-operator GreaterThanThreshold \
+              --treat-missing-data notBreaching
+
+            aws cloudwatch put-metric-alarm \
+              --alarm-name "Orioneta-Frontend-EC2-StatusCheck" \
+              --alarm-description "La instancia EC2 del frontend fallo un status check." \
+              --namespace AWS/EC2 \
+              --metric-name StatusCheckFailed \
+              --dimensions "Name=InstanceId,Value=${FRONTEND_INSTANCE_ID}" \
+              --statistic Maximum \
+              --period 60 \
+              --evaluation-periods 2 \
+              --threshold 1 \
+              --comparison-operator GreaterThanOrEqualToThreshold \
+              --treat-missing-data notBreaching
+          fi
+
+          if [ -n "${CLUSTER_NAME}" ]; then
+            aws cloudwatch put-metric-alarm \
+              --alarm-name "Orioneta-EKS-CPU-Nodos-Alta" \
+              --alarm-description "CPU de nodos EKS sobre 80% durante 5 minutos." \
+              --namespace ContainerInsights \
+              --metric-name cluster_node_cpu_utilization \
+              --dimensions "Name=ClusterName,Value=${CLUSTER_NAME}" \
+              --statistic Average \
+              --period 60 \
+              --evaluation-periods 5 \
+              --threshold 80 \
+              --comparison-operator GreaterThanThreshold \
+              --treat-missing-data notBreaching || true
+
+            aws cloudwatch put-metric-alarm \
+              --alarm-name "Orioneta-EKS-Memoria-Nodos-Alta" \
+              --alarm-description "Memoria de nodos EKS sobre 85% durante 5 minutos." \
+              --namespace ContainerInsights \
+              --metric-name cluster_node_memory_utilization \
+              --dimensions "Name=ClusterName,Value=${CLUSTER_NAME}" \
+              --statistic Average \
+              --period 60 \
+              --evaluation-periods 5 \
+              --threshold 85 \
+              --comparison-operator GreaterThanThreshold \
+              --treat-missing-data notBreaching || true
+          fi
+
+      - name: Resumen para documentacion
+        env:
+          ACCOUNT_ID: ${{ steps.resources.outputs.account_id }}
+          CLUSTER_NAME: ${{ steps.resources.outputs.cluster_name }}
+          FRONTEND_INSTANCE_ID: ${{ steps.resources.outputs.frontend_instance_id }}
+        run: |
+          set -euo pipefail
+
+          dashboard_url="https://${AWS_REGION}.console.aws.amazon.com/cloudwatch/home?region=${AWS_REGION}#dashboards:name=${DASHBOARD_NAME}"
+          alarms_url="https://${AWS_REGION}.console.aws.amazon.com/cloudwatch/home?region=${AWS_REGION}#alarmsV2:"
+          logs_url="https://${AWS_REGION}.console.aws.amazon.com/cloudwatch/home?region=${AWS_REGION}#logsV2:log-groups"
+          container_url="https://${AWS_REGION}.console.aws.amazon.com/cloudwatch/home?region=${AWS_REGION}#container-insights:"
+
+          {
+            echo "## CloudWatch Orioneta"
+            echo ""
+            echo "- Cuenta: ${ACCOUNT_ID}"
+            echo "- Region: ${AWS_REGION}"
+            echo "- Dashboard: ${dashboard_url}"
+            echo "- Alarmas: ${alarms_url}"
+            echo "- Logs: ${logs_url}"
+            echo "- Container Insights: ${container_url}"
+            echo "- Cluster EKS: ${CLUSTER_NAME:-no configurado}"
+            echo "- EC2 frontend: ${FRONTEND_INSTANCE_ID:-no resuelta}"
+          } >> "${GITHUB_STEP_SUMMARY}"
