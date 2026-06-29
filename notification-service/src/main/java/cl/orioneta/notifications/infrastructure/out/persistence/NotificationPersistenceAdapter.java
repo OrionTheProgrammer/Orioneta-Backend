@@ -44,11 +44,7 @@ public class NotificationPersistenceAdapter implements NotificationRepositoryPor
                 notification.getBody(),
                 notification.isRead(),
                 notification.getCreatedAt(),
-                notification.getReadAt(),
-                notification.getSenderId(),
-                notification.getSenderName(),
-                notification.getSenderAvatar(),
-                notification.getConversationId()
+                notification.getReadAt()
         );
     }
 
@@ -61,11 +57,7 @@ public class NotificationPersistenceAdapter implements NotificationRepositoryPor
                 entity.getBody(),
                 entity.isRead(),
                 entity.getCreatedAt(),
-                entity.getReadAt(),
-                entity.getSenderId(),
-                entity.getSenderName(),
-                entity.getSenderAvatar(),
-                entity.getConversationId()
+                entity.getReadAt()
         );
     }
 }

@@ -44,15 +44,6 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
-app:
-  rabbitmq:
-    queue:
-      notifications:
-        messages: orioneta.notifications.messages
-        friend-requests:
-          sent: orioneta.notifications.friend-requests.sent
-          accepted: orioneta.notifications.friend-requests.accepted
-
 logging:
   level:
     root: INFO

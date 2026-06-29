@@ -15,7 +15,7 @@ import cl.orioneta.messages.application.dto.SendMessageRequestDTO;
 import cl.orioneta.messages.application.event.MessageEventPublisher;
 import cl.orioneta.messages.domain.model.Message;
 import cl.orioneta.messages.domain.model.MessageType;
-import cl.orioneta.messages.infrastructure.out.persistence.AsyncMessagePersister;
+import cl.orioneta.messages.domain.repository.MessageRepositoryPort;
 import java.util.List;
 import java.util.UUID;
 import net.datafaker.Faker;
@@ -26,13 +26,16 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+/**
+ * Pruebas del caso de uso que envia mensajes.
+ */
 @ExtendWith(MockitoExtension.class)
 class SendMessageUseCaseTest {
 
     private final Faker faker = new Faker();
 
     @Mock
-    private AsyncMessagePersister asyncMessagePersister;
+    private MessageRepositoryPort messageRepositoryPort;
 
     @Mock
     private ConversationLookupPort conversationLookupPort;
@@ -44,11 +47,11 @@ class SendMessageUseCaseTest {
 
     @BeforeEach
     void setUp() {
-        useCase = new SendMessageUseCase(asyncMessagePersister, conversationLookupPort, messageEventPublisher);
+        useCase = new SendMessageUseCase(messageRepositoryPort, conversationLookupPort, messageEventPublisher);
     }
 
     @Test
-    void executePublishesEventAndPersistsAsyncWhenSenderBelongsToConversation() {
+    void executeSavesMessageAndPublishesEventWhenSenderBelongsToConversation() {
         UUID conversationId = UUID.randomUUID();
         UUID senderId = UUID.randomUUID();
         UUID receiverId = UUID.randomUUID();
@@ -63,11 +66,12 @@ class SendMessageUseCaseTest {
                 MessageType.TEXT
         );
         when(conversationLookupPort.findById(conversationId)).thenReturn(conversation);
+        when(messageRepositoryPort.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Message message = useCase.execute(request);
 
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(asyncMessagePersister).persistAsync(messageCaptor.capture());
+        verify(messageRepositoryPort).save(messageCaptor.capture());
         verify(messageEventPublisher).publishMessageSent(eq(message), eq(List.of(senderId, receiverId)));
 
         assertThat(messageCaptor.getValue().getConversationId()).isEqualTo(conversationId);
@@ -95,7 +99,7 @@ class SendMessageUseCaseTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("El emisor no participa en la conversacion");
 
-        verify(asyncMessagePersister, never()).persistAsync(any(Message.class));
+        verify(messageRepositoryPort, never()).save(any(Message.class));
         verify(messageEventPublisher, never()).publishMessageSent(any(Message.class), any());
     }
 }

@@ -15,18 +15,6 @@ public class CreateNotificationUseCase {
     }
 
     public Notification execute(NotificationRequestDTO request) {
-        if (request.senderId() != null || request.senderName() != null || request.conversationId() != null) {
-            return notificationRepositoryPort.save(Notification.createWithSender(
-                    request.userId(),
-                    request.type(),
-                    request.title(),
-                    request.body(),
-                    request.senderId(),
-                    request.senderName(),
-                    request.senderAvatar(),
-                    request.conversationId()
-            ));
-        }
         return notificationRepositoryPort.save(Notification.create(
                 request.userId(),
                 request.type(),

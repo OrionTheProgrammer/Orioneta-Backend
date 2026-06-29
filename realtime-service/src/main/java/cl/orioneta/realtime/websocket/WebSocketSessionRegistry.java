@@ -1,12 +1,11 @@
 package cl.orioneta.realtime.websocket;
 
 import cl.orioneta.realtime.dto.UserConnectionDTO;
-import cl.orioneta.realtime.service.RedisPresenceService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -18,26 +17,12 @@ import java.util.concurrent.ConcurrentMap;
 @Component
 public class WebSocketSessionRegistry {
 
-    private static final Logger log = LoggerFactory.getLogger(WebSocketSessionRegistry.class);
-
     private final ConcurrentMap<UUID, Set<WebSocketSession>> sessionsByUser = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, WebSocketSession> sessionsById = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, UserConnectionDTO> connectionsBySession = new ConcurrentHashMap<>();
-    private final RedisPresenceService redisPresenceService;
-
-    public WebSocketSessionRegistry(RedisPresenceService redisPresenceService) {
-        this.redisPresenceService = redisPresenceService;
-    }
-
-    public String getInstanceId() {
-        return redisPresenceService.getInstanceId();
-    }
 
     public void register(UUID userId, WebSocketSession session) {
         sessionsByUser.computeIfAbsent(userId, ignored -> ConcurrentHashMap.newKeySet()).add(session);
-        sessionsById.put(session.getId(), session);
         connectionsBySession.put(session.getId(), new UserConnectionDTO(userId, session.getId(), Instant.now()));
-        redisPresenceService.markOnline(userId, session.getId());
     }
 
     public void unregister(UUID userId, WebSocketSession session) {
@@ -49,24 +34,11 @@ public class WebSocketSessionRegistry {
             }
         }
 
-        sessionsById.remove(session.getId());
         connectionsBySession.remove(session.getId());
-        redisPresenceService.markOffline(userId, session.getId());
-    }
-
-    public WebSocketSession getSession(String sessionId) {
-        return sessionsById.get(sessionId);
-    }
-
-    public Collection<WebSocketSession> getAllSessions() {
-        return sessionsById.values();
     }
 
     public void sendToUser(UUID userId, String payload) {
         Set<WebSocketSession> sessions = sessionsByUser.getOrDefault(userId, Set.of());
-        if (sessions.isEmpty()) {
-            log.warn("[WS-Send] No hay sesiones WebSocket para userId={}. No se puede enviar el mensaje", userId);
-        }
         for (WebSocketSession session : sessions) {
             send(session, payload);
         }
@@ -85,7 +57,7 @@ public class WebSocketSessionRegistry {
     }
 
     public boolean isUserOnline(UUID userId) {
-        return sessionsByUser.containsKey(userId) || redisPresenceService.isOnline(userId);
+        return sessionsByUser.containsKey(userId);
     }
 
     public List<UserConnectionDTO> findAllConnections() {
@@ -99,22 +71,17 @@ public class WebSocketSessionRegistry {
                 .toList();
     }
 
-    public void refreshPresence(UUID userId, WebSocketSession session) {
-        redisPresenceService.refreshPresence(userId, session.getId());
-    }
-
     private void send(WebSocketSession session, String payload) {
         if (!session.isOpen()) {
-            log.warn("[WS-Send] Intento de enviar mensaje a sesión cerrada: sessionId={}", session.getId());
             return;
         }
 
         try {
             synchronized (session) {
-                session.sendMessage(new org.springframework.web.socket.TextMessage(payload));
+                session.sendMessage(new TextMessage(payload));
             }
-        } catch (Exception e) {
-            log.error("[WS-Send] Error enviando mensaje a sesión {}: {}", session.getId(), e.getMessage());
+        } catch (IOException ignored) {
+            // La sesion se limpiara cuando Spring dispare afterConnectionClosed.
         }
     }
 }

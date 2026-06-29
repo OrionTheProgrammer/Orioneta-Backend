@@ -48,11 +48,7 @@ class NotificationUseCaseTest {
                 UUID.randomUUID(),
                 "FRIEND_REQUEST",
                 faker.lorem().sentence(),
-                faker.lorem().sentence(),
-                null,
-                null,
-                null,
-                null
+                faker.lorem().sentence()
         );
         when(notificationRepositoryPort.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
 

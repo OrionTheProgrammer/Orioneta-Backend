@@ -16,8 +16,4 @@ public record PresenceEventDTO(
     public static PresenceEventDTO disconnected(UUID userId) {
         return new PresenceEventDTO("USER_DISCONNECTED", userId, false, Instant.now());
     }
-
-    public static PresenceEventDTO statusChanged(UUID userId, String changeType, String newValue) {
-        return new PresenceEventDTO("USER_STATUS_CHANGED", userId, true, Instant.now());
-    }
 }
