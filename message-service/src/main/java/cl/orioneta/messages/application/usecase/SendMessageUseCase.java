@@ -6,8 +6,9 @@ import cl.orioneta.messages.application.conversation.ConversationParticipantSumm
 import cl.orioneta.messages.application.conversation.ConversationSummary;
 import cl.orioneta.messages.application.event.MessageEventPublisher;
 import cl.orioneta.messages.domain.model.Message;
-import cl.orioneta.messages.domain.repository.MessageRepositoryPort;
+import cl.orioneta.messages.infrastructure.out.persistence.AsyncMessagePersister;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -18,16 +19,16 @@ import java.util.UUID;
 @Service
 public class SendMessageUseCase {
 
-    private final MessageRepositoryPort messageRepositoryPort;
+    private final AsyncMessagePersister asyncMessagePersister;
     private final ConversationLookupPort conversationLookupPort;
     private final MessageEventPublisher messageEventPublisher;
 
     public SendMessageUseCase(
-            MessageRepositoryPort messageRepositoryPort,
+            AsyncMessagePersister asyncMessagePersister,
             ConversationLookupPort conversationLookupPort,
             MessageEventPublisher messageEventPublisher
     ) {
-        this.messageRepositoryPort = messageRepositoryPort;
+        this.asyncMessagePersister = asyncMessagePersister;
         this.conversationLookupPort = conversationLookupPort;
         this.messageEventPublisher = messageEventPublisher;
     }
@@ -46,10 +47,10 @@ public class SendMessageUseCase {
                 request.type()
         );
 
-        Message savedMessage = messageRepositoryPort.save(message);
-        messageEventPublisher.publishMessageSent(savedMessage, participantIds(conversation));
+        messageEventPublisher.publishMessageSent(message, participantIds(conversation));
+        asyncMessagePersister.persistAsync(message);
 
-        return savedMessage;
+        return message;
     }
 
     private List<UUID> participantIds(ConversationSummary conversation) {

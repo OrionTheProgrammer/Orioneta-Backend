@@ -78,6 +78,11 @@ management:
     readinessstate:
       enabled: true
 
+orioneta:
+  auth:
+    jwt:
+      secret: ${ORIONETA_JWT_SECRET:orioneta-dev-jwt-secret-change-me-with-32-bytes-minimum}
+
 logging:
   level:
     root: INFO

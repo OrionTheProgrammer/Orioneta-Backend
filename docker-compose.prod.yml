@@ -437,6 +437,21 @@ services:
     depends_on:
       - prometheus
 
+  coturn:
+    profiles:
+      - realtime
+    image: coturn/coturn:4.6
+    container_name: orioneta-coturn
+    restart: unless-stopped
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+      - "5349:5349/udp"
+      - "5349:5349/tcp"
+    volumes:
+      - ./docker/coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+
 volumes:
   postgres_data:
   rabbitmq_data:

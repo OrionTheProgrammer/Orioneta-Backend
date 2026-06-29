@@ -15,6 +15,8 @@ public record RealtimeMessageDTO(
         UUID messageId,
         String messageType,
         String content,
+        String senderName,
+        String senderAvatar,
         Instant occurredAt
 ) {
     public RealtimeMessageDTO withDefaults(UUID fallbackSenderId) {
@@ -27,6 +29,8 @@ public record RealtimeMessageDTO(
                 messageId,
                 messageType,
                 content,
+                senderName,
+                senderAvatar,
                 occurredAt == null ? Instant.now() : occurredAt
         );
     }

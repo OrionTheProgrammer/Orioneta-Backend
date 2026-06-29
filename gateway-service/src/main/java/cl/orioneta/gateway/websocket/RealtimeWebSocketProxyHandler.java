@@ -1,5 +1,7 @@
 package cl.orioneta.gateway.websocket;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -8,46 +10,56 @@ import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Queue;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-/**
- * Proxy WebSocket entre el frontend y realtime-service.
- *
- * <p>Spring Cloud Gateway MVC enruta bien HTTP, pero no hace upgrade WebSocket
- * con rutas declarativas. Este handler mantiene el gateway como punto unico de
- * entrada y delega la sesion real a realtime-service sin agregar logica de chat.</p>
- */
 @Component
 public class RealtimeWebSocketProxyHandler extends TextWebSocketHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(RealtimeWebSocketProxyHandler.class);
     private static final String UPSTREAM_SESSION_ATTRIBUTE = "realtimeUpstreamSession";
     private static final String PENDING_MESSAGES_ATTRIBUTE = "realtimePendingMessages";
 
     private final StandardWebSocketClient webSocketClient;
     private final String realtimeServiceUrl;
+    private final JwtWebSocketInterceptor jwtValidator;
 
     public RealtimeWebSocketProxyHandler(
-            @Value("${orioneta.routes.realtime:${ORIONETA_REALTIME_URL:http://localhost:8091}}") String realtimeServiceUrl
+            @Value("${orioneta.routes.realtime:http://localhost:8091}") String realtimeServiceUrl,
+            JwtWebSocketInterceptor jwtValidator
     ) {
         this.webSocketClient = new StandardWebSocketClient();
         this.realtimeServiceUrl = realtimeServiceUrl;
+        this.jwtValidator = jwtValidator;
     }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession clientSession) {
+        UUID userId = jwtValidator.extractUserIdFromUri(clientSession.getUri());
+
+        if (userId == null) {
+            log.warn("Conexion WebSocket rechazada: token invalido o ausente");
+            closeQuietly(clientSession, CloseStatus.POLICY_VIOLATION);
+            return;
+        }
+
         Queue<String> pendingMessages = new ConcurrentLinkedQueue<>();
         clientSession.getAttributes().put(PENDING_MESSAGES_ATTRIBUTE, pendingMessages);
+
+        URI upstreamUri = buildUpstreamUri(clientSession, userId);
 
         webSocketClient.execute(
                 new UpstreamRealtimeHandler(clientSession),
                 new WebSocketHttpHeaders(),
-                buildUpstreamUri(clientSession)
+                upstreamUri
         ).whenComplete((upstreamSession, error) -> {
             if (error != null) {
+                log.error("Error conectando con realtime-service", error);
                 closeQuietly(clientSession, CloseStatus.SERVER_ERROR);
                 return;
             }
@@ -60,13 +72,17 @@ public class RealtimeWebSocketProxyHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession clientSession, TextMessage message) {
         WebSocketSession upstreamSession = findUpstreamSession(clientSession);
+        String payload = message.getPayload();
+        String type = extractType(payload);
 
         if (upstreamSession == null || !upstreamSession.isOpen()) {
-            findPendingMessages(clientSession).add(message.getPayload());
+            log.info("[WS-Proxy] Cliente->Backend ENCOLADO: type={}, sessionId={}", type, clientSession.getId());
+            findPendingMessages(clientSession).add(payload);
             return;
         }
 
-        send(upstreamSession, message.getPayload());
+        log.info("[WS-Proxy] Cliente->Backend REENVIADO: type={}, sessionId={}", type, clientSession.getId());
+        send(upstreamSession, payload);
     }
 
     @Override
@@ -79,20 +95,13 @@ public class RealtimeWebSocketProxyHandler extends TextWebSocketHandler {
         closeQuietly(findUpstreamSession(clientSession), CloseStatus.SERVER_ERROR);
     }
 
-    private URI buildUpstreamUri(WebSocketSession clientSession) {
-        URI clientUri = clientSession.getUri();
-        String query = clientUri == null ? null : clientUri.getRawQuery();
+    private URI buildUpstreamUri(WebSocketSession clientSession, UUID validatedUserId) {
         String normalizedBaseUrl = realtimeServiceUrl
                 .replaceFirst("^http://", "ws://")
                 .replaceFirst("^https://", "wss://")
                 .replaceAll("/+$", "");
 
-        String uri = normalizedBaseUrl + "/ws/chat";
-        if (query != null && !query.isBlank()) {
-            uri = uri + "?" + query;
-        }
-
-        return URI.create(uri);
+        return URI.create(normalizedBaseUrl + "/ws/chat?userId=" + validatedUserId);
     }
 
     private void drainPendingMessages(WebSocketSession upstreamSession, Queue<String> pendingMessages) {
@@ -148,7 +157,19 @@ public class RealtimeWebSocketProxyHandler extends TextWebSocketHandler {
         try {
             session.close(status);
         } catch (IOException ignored) {
-            // La sesion ya esta en cierre o fue cerrada por el otro extremo.
+        }
+    }
+
+    private String extractType(String payload) {
+        try {
+            int typeIdx = payload.indexOf("\"type\"");
+            if (typeIdx == -1) return "UNKNOWN";
+            int colonIdx = payload.indexOf(':', typeIdx + 6);
+            int commaIdx = payload.indexOf(',', colonIdx);
+            if (commaIdx == -1) return payload.substring(colonIdx + 1).trim().replaceAll("[\"}]", "");
+            return payload.substring(colonIdx + 1, commaIdx).trim().replaceAll("[\"}]", "");
+        } catch (Exception e) {
+            return "PARSE_ERROR";
         }
     }
 
@@ -162,7 +183,10 @@ public class RealtimeWebSocketProxyHandler extends TextWebSocketHandler {
 
         @Override
         protected void handleTextMessage(WebSocketSession upstreamSession, TextMessage message) {
-            send(clientSession, message.getPayload());
+            String payload = message.getPayload();
+            String type = extractType(payload);
+            log.info("[WS-Proxy] Backend->Cliente REENVIADO: type={}, sessionId={}", type, clientSession.getId());
+            send(clientSession, payload);
         }
 
         @Override

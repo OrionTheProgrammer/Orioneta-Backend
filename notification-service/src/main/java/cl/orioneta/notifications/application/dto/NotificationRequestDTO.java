@@ -5,9 +5,6 @@ import jakarta.validation.constraints.NotNull;
 
 import java.util.UUID;
 
-/**
- * Datos para crear una notificacion.
- */
 public record NotificationRequestDTO(
         @NotNull(message = "El usuario es obligatorio")
         UUID userId,
@@ -18,6 +15,14 @@ public record NotificationRequestDTO(
         @NotBlank(message = "El titulo es obligatorio")
         String title,
 
-        String body
+        String body,
+
+        UUID senderId,
+
+        String senderName,
+
+        String senderAvatar,
+
+        UUID conversationId
 ) {
 }

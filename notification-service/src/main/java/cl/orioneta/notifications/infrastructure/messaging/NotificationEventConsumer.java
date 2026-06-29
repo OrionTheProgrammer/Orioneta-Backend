@@ -2,63 +2,84 @@ package cl.orioneta.notifications.infrastructure.messaging;
 
 import cl.orioneta.notifications.application.dto.NotificationRequestDTO;
 import cl.orioneta.notifications.application.usecase.CreateNotificationUseCase;
-import cl.orioneta.notifications.infrastructure.config.RabbitMQConfig;
+import cl.orioneta.notifications.infrastructure.client.UserServiceClient;
 import cl.orioneta.shared.events.FriendRequestAcceptedEvent;
 import cl.orioneta.shared.events.FriendRequestSentEvent;
 import cl.orioneta.shared.events.MessageSentEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
-import java.util.UUID;
 
 @Component
 public class NotificationEventConsumer {
 
+    private static final Logger log = LoggerFactory.getLogger(NotificationEventConsumer.class);
+
     private final CreateNotificationUseCase createNotificationUseCase;
+    private final UserServiceClient userServiceClient;
 
-    public NotificationEventConsumer(CreateNotificationUseCase createNotificationUseCase) {
+    public NotificationEventConsumer(
+            CreateNotificationUseCase createNotificationUseCase,
+            UserServiceClient userServiceClient
+    ) {
         this.createNotificationUseCase = createNotificationUseCase;
+        this.userServiceClient = userServiceClient;
     }
 
-    @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_MESSAGE_QUEUE)
+    @RabbitListener(queues = "${app.rabbitmq.queue.notifications.messages}")
     public void consumeMessageSent(MessageSentEvent event) {
-        participantsWithoutSender(event.participantIds(), event.senderId())
-                .forEach(userId -> createNotificationUseCase.execute(new NotificationRequestDTO(
-                        userId,
-                        "MESSAGE_SENT",
-                        "Nuevo mensaje",
-                        "Tienes un mensaje nuevo en una conversacion."
-                )));
+        UserServiceClient.UserProfile senderProfile = userServiceClient.getUserProfile(event.senderId());
+
+        event.participantIds().stream()
+                .filter(participantId -> !participantId.equals(event.senderId()))
+                .forEach(participantId -> {
+                    createNotificationUseCase.execute(new NotificationRequestDTO(
+                            participantId,
+                            "MESSAGE_SENT",
+                            senderProfile != null ? senderProfile.displayName() : "Nuevo mensaje",
+                            "Tienes un mensaje nuevo en una conversacion.",
+                            event.senderId(),
+                            senderProfile != null ? senderProfile.displayName() : null,
+                            senderProfile != null ? senderProfile.profilePhoto() : null,
+                            event.conversationId()
+                    ));
+                });
     }
 
-    @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_FRIEND_REQUEST_SENT_QUEUE)
+    @RabbitListener(queues = "${app.rabbitmq.queue.notifications.friend-requests.sent}")
     public void consumeFriendRequestSent(FriendRequestSentEvent event) {
+        UserServiceClient.UserProfile senderProfile = userServiceClient.getUserProfile(event.senderUserId());
+
         createNotificationUseCase.execute(new NotificationRequestDTO(
                 event.receiverUserId(),
                 "FRIEND_REQUEST_SENT",
-                "Nueva solicitud de amistad",
-                "Un usuario quiere agregarte como amigo."
+                senderProfile != null ? "Solicitud de amistad" : "Solicitud de amistad",
+                senderProfile != null
+                        ? senderProfile.displayName() + " quiere ser tu amigo"
+                        : "Alguien quiere ser tu amigo",
+                event.senderUserId(),
+                senderProfile != null ? senderProfile.displayName() : null,
+                senderProfile != null ? senderProfile.profilePhoto() : null,
+                null
         ));
     }
 
-    @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_FRIEND_REQUEST_ACCEPTED_QUEUE)
+    @RabbitListener(queues = "${app.rabbitmq.queue.notifications.friend-requests.accepted}")
     public void consumeFriendRequestAccepted(FriendRequestAcceptedEvent event) {
+        UserServiceClient.UserProfile acceptorProfile = userServiceClient.getUserProfile(event.receiverUserId());
+
         createNotificationUseCase.execute(new NotificationRequestDTO(
                 event.senderUserId(),
                 "FRIEND_REQUEST_ACCEPTED",
-                "Solicitud aceptada",
-                "Tu solicitud de amistad fue aceptada."
+                acceptorProfile != null ? "Solicitud aceptada" : "Solicitud aceptada",
+                acceptorProfile != null
+                        ? acceptorProfile.displayName() + " acepto tu solicitud"
+                        : "Tu solicitud de amistad fue aceptada",
+                event.receiverUserId(),
+                acceptorProfile != null ? acceptorProfile.displayName() : null,
+                acceptorProfile != null ? acceptorProfile.profilePhoto() : null,
+                null
         ));
-    }
-
-    private List<UUID> participantsWithoutSender(List<UUID> participantIds, UUID senderId) {
-        if (participantIds == null) {
-            return List.of();
-        }
-
-        return participantIds.stream()
-                .filter(userId -> !userId.equals(senderId))
-                .toList();
     }
 }
