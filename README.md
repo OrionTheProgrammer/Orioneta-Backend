@@ -11,6 +11,7 @@ Spring Boot, Spring Cloud Gateway, PostgreSQL, RabbitMQ, Redis y MinIO.
 - Rama de integracion y produccion: `main`
 
 ## Arquitectura
+   
 
 ```text
 Navegador
