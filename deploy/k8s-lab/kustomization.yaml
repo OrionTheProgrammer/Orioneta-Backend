@@ -34,6 +34,13 @@ patches:
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 30
+  - target:
+      kind: Deployment
+      labelSelector: app.kubernetes.io/part-of=orioneta
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 100m
 
 images:
   - name: docker.io/oriontheprogrammer/orioneta-gateway-service
