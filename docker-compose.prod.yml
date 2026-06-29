@@ -163,10 +163,18 @@ services:
       ORIONETA_JWT_SECRET: ${ORIONETA_JWT_SECRET:?Define ORIONETA_JWT_SECRET}
       ORIONETA_OAUTH2_SUCCESS_REDIRECT_URI: ${ORIONETA_OAUTH2_SUCCESS_REDIRECT_URI:-http://localhost:5173/auth/oauth2/callback}
       ORIONETA_OAUTH2_FAILURE_REDIRECT_URI: ${ORIONETA_OAUTH2_FAILURE_REDIRECT_URI:-http://localhost:5173/auth/oauth2/error}
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:8082/login/oauth2/code/google}
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI:-http://localhost:8082/login/oauth2/code/github}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-dev-google-client-id}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-dev-google-client-secret}
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-dev-github-client-id}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-dev-github-client-secret}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-dev@orioneta.cl}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-dev-mail-password}
+      MAIL_FROM: ${MAIL_FROM:-noreply@orioneta.cl}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Orioneta}
     depends_on:
       postgres:
         condition: service_healthy

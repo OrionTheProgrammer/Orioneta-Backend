@@ -236,6 +236,12 @@ jobs:
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           GITHUB_CLIENT_ID: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
           GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
+          MAIL_HOST: ${{ secrets.MAIL_HOST }}
+          MAIL_PORT: ${{ secrets.MAIL_PORT }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_FROM_NAME: ${{ secrets.MAIL_FROM_NAME }}
         run: |
           set -euo pipefail
           for required in POSTGRES_PASSWORD RABBITMQ_PASSWORD MINIO_ROOT_PASSWORD ORIONETA_JWT_SECRET; do
@@ -259,6 +265,12 @@ jobs:
             --from-literal=GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET:-dev-google-client-secret}" \
             --from-literal=GITHUB_CLIENT_ID="${GITHUB_CLIENT_ID:-dev-github-client-id}" \
             --from-literal=GITHUB_CLIENT_SECRET="${GITHUB_CLIENT_SECRET:-dev-github-client-secret}" \
+            --from-literal=MAIL_HOST="${MAIL_HOST:-smtp.gmail.com}" \
+            --from-literal=MAIL_PORT="${MAIL_PORT:-587}" \
+            --from-literal=MAIL_USERNAME="${MAIL_USERNAME:-dev@orioneta.cl}" \
+            --from-literal=MAIL_PASSWORD="${MAIL_PASSWORD:-dev-mail-password}" \
+            --from-literal=MAIL_FROM="${MAIL_FROM:-noreply@orioneta.cl}" \
+            --from-literal=MAIL_FROM_NAME="${MAIL_FROM_NAME:-Orioneta}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Aplicar manifiestos y etiqueta de imagen

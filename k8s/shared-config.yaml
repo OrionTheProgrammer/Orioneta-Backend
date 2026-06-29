@@ -32,6 +32,8 @@ data:
   ORIONETA_CORS_ALLOWED_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:3000,http://orioneta.accesscam.org,https://orioneta.accesscam.org,http://3.82.134.149"
   ORIONETA_OAUTH2_SUCCESS_REDIRECT_URI: "https://orioneta.accesscam.org/auth/oauth2/callback"
   ORIONETA_OAUTH2_FAILURE_REDIRECT_URI: "https://orioneta.accesscam.org/auth/oauth2/error"
+  SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI: "https://orioneta.accesscam.org/login/oauth2/code/google"
+  SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GITHUB_REDIRECT_URI: "https://orioneta.accesscam.org/login/oauth2/code/github"
 
   MINIO_ENDPOINT: "http://minio:9000"
   MINIO_BUCKET: "orioneta-media"
