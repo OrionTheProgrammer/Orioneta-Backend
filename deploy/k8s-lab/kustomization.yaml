@@ -35,18 +35,6 @@ patches:
           timeoutSeconds: 5
           failureThreshold: 30
 
-replicas:
-  - name: audit-service
-    count: 0
-  - name: customization-service
-    count: 0
-  - name: moderation-service
-    count: 0
-  - name: neta-market-service
-    count: 0
-  - name: notification-service
-    count: 0
-
 images:
   - name: docker.io/oriontheprogrammer/orioneta-gateway-service
     newTag: latest

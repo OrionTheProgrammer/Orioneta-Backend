@@ -44,6 +44,10 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
+orioneta:
+  services:
+    media: ${ORIONETA_MEDIA_URL:http://localhost:8089}
+
 logging:
   level:
     root: INFO

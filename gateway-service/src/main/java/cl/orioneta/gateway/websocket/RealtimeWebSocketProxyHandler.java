@@ -31,7 +31,7 @@ public class RealtimeWebSocketProxyHandler extends TextWebSocketHandler {
     private final String realtimeServiceUrl;
 
     public RealtimeWebSocketProxyHandler(
-            @Value("${orioneta.routes.realtime:http://localhost:8091}") String realtimeServiceUrl
+            @Value("${orioneta.routes.realtime:${ORIONETA_REALTIME_URL:http://localhost:8091}}") String realtimeServiceUrl
     ) {
         this.webSocketClient = new StandardWebSocketClient();
         this.realtimeServiceUrl = realtimeServiceUrl;
