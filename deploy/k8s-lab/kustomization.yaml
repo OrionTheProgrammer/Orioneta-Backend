@@ -21,6 +21,19 @@ patches:
     patch: |-
       - op: remove
         path: /spec/loadBalancerClass
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/startupProbe
+        value:
+          httpGet:
+            path: /actuator/health/liveness
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
 
 replicas:
   - name: audit-service
