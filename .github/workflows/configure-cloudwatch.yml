@@ -57,15 +57,16 @@ jobs:
         env:
           EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
+          FRONTEND_INSTANCE_ID_SECRET: ${{ secrets.FRONTEND_INSTANCE_ID }}
         run: |
           set -euo pipefail
 
           account_id="$(aws sts get-caller-identity --query Account --output text)"
           region="${AWS_REGION}"
-          frontend_instance_id=""
+          frontend_instance_id="${FRONTEND_INSTANCE_ID_SECRET:-}"
           frontend_lookup="${EC2_HOST:-}"
 
-          if [ -n "${EC2_HOST:-}" ]; then
+          if [ -z "${frontend_instance_id}" ] && [ -n "${EC2_HOST:-}" ]; then
             if ! printf '%s' "${EC2_HOST}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then
               frontend_lookup="$(getent ahostsv4 "${EC2_HOST}" | awk '{print $1; exit}' || true)"
             fi
@@ -75,6 +76,41 @@ jobs:
               --filters "Name=ip-address,Values=${frontend_lookup}" "Name=instance-state-name,Values=pending,running,stopped" \
               --query 'Reservations[].Instances[].InstanceId' \
               --output text 2>/dev/null | awk '{print $1}' || true)"
+          fi
+
+          if [ -z "${frontend_instance_id}" ]; then
+            aws ec2 describe-instances \
+              --filters "Name=instance-state-name,Values=running" \
+              --query 'Reservations[].Instances[?PublicIpAddress!=`null`].{InstanceId:InstanceId,PublicIp:PublicIpAddress,Name:Tags[?Key==`Name`]|[0].Value}' \
+              --output json >/tmp/orioneta-public-instances.json 2>/dev/null || echo "[]" >/tmp/orioneta-public-instances.json
+
+            frontend_instance_id="$(python3 - <<'PY'
+          import json
+
+          with open("/tmp/orioneta-public-instances.json", encoding="utf-8") as file:
+              instances = [item for group in json.load(file) for item in (group if isinstance(group, list) else [group])]
+
+          def score(instance):
+              name = (instance.get("Name") or "").lower()
+              if "frontend" in name or "front" in name:
+                  return 100
+              if "public" in name:
+                  return 80
+              if "orioneta" in name:
+                  return 60
+              if "eks" in name or "node" in name:
+                  return -100
+              return 0
+
+          candidates = [item for item in instances if item.get("InstanceId")]
+          scored = sorted(((score(item), item) for item in candidates), key=lambda pair: pair[0], reverse=True)
+
+          if scored and scored[0][0] > 0:
+              print(scored[0][1]["InstanceId"])
+          elif len(candidates) == 1:
+              print(candidates[0]["InstanceId"])
+          PY
+          )"
           fi
 
           {

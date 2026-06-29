@@ -19,6 +19,8 @@ Configure CloudWatch observability
 
 Ese workflow usa los secretos de AWS del repositorio, conecta con EKS, intenta activar el add-on `amazon-cloudwatch-observability`, configura el agente en la EC2 del frontend cuando el laboratorio permite asociar un instance profile, y crea el dashboard `Orioneta-Beta-Observability`.
 
+Si la EC2 del frontend no se detecta automaticamente, agrega el secreto `FRONTEND_INSTANCE_ID` en GitHub con el ID de la instancia, por ejemplo `i-xxxxxxxxxxxxxxxxx`, y vuelve a ejecutar el workflow.
+
 ## Como acceder para mostrarlo en el video
 
 1. Entrar a AWS Console.
